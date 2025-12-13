@@ -8,6 +8,13 @@
       "when": 1765429247885,
       "tag": "0000_sparkling_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765641455703,
+      "tag": "0001_safe_tiger_shark",
+      "breakpoints": true
     }
   ]
 }

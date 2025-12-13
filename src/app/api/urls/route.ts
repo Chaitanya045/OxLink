@@ -7,9 +7,20 @@ import {
   isValidUrl,
 } from "@/lib/utils";
 import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if user is authenticated
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please sign in to create short URLs." },
+        { status: 401 }
+      );
+    }
     const body = await req.json();
     const { originalUrl, customAlias, expiryDate } = body;
 
@@ -76,6 +87,7 @@ export async function POST(req: NextRequest) {
         shortCode,
         customAlias: customAlias || null,
         expiryDate: parsedExpiryDate,
+        createdBy: session.user.id,
       })
       .returning();
 
