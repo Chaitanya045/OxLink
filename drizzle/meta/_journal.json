@@ -15,6 +15,13 @@
       "when": 1765641455703,
       "tag": "0001_safe_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765737790362,
+      "tag": "0002_ambiguous_tomas",
+      "breakpoints": true
     }
   ]
 }

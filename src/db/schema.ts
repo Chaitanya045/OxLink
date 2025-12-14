@@ -11,9 +11,50 @@ export const urls = table(
     customAlias: t.varchar("custom_alias", { length: 50 }),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
     expiryDate: t.timestamp("expiry_date"),
-    createdBy: t.text("created_by").notNull().references(() => user.id),
+    createdBy: t
+      .text("created_by")
+      .notNull()
+      .references(() => user.id),
   },
   (table) => [t.uniqueIndex("short_code_idx").on(table.shortCode)]
+);
+
+export const urlClicks = table(
+  "url_clicks",
+  {
+    id: t
+      .bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    urlId: t
+      .integer("url_id")
+      .notNull()
+      .references(() => urls.id),
+
+    clickedAt: t.timestamp("clicked_at").defaultNow().notNull(),
+
+    ipAddress: t.varchar("ip_address", { length: 45 }), // IPv4 + IPv6
+
+    userAgent: t.text("user_agent"),
+    shortCode: t.text("short_code").notNull().references(() => urls.shortCode),
+
+    referrer: t.text("referrer"),
+
+    country: t.varchar("country", { length: 2 }), // ISO: IN, US
+    region: t.varchar("region", { length: 50 }),
+    city: t.varchar("city", { length: 50 }),
+
+    deviceType: t.varchar("device_type", { length: 20 }), // mobile / desktop
+    os: t.varchar("os", { length: 50 }),
+    browser: t.varchar("browser", { length: 50 }),
+
+    isBot: t.boolean("is_bot").default(false).notNull(),
+  },
+  (table) => [
+    t.index("url_clicks_url_id_idx").on(table.urlId),
+    t.index("url_clicks_clicked_at_idx").on(table.clickedAt),
+    t.index("url_clicks_short_code_idx").on(table.shortCode),
+  ]
 );
 
 export const user = table("user", {
@@ -23,7 +64,8 @@ export const user = table("user", {
   emailVerified: t.boolean("email_verified").default(false).notNull(),
   image: t.text("image"),
   createdAt: t.timestamp("created_at").defaultNow().notNull(),
-  updatedAt: t.timestamp("updated_at")
+  updatedAt: t
+    .timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -36,12 +78,14 @@ export const session = table(
     expiresAt: t.timestamp("expires_at").notNull(),
     token: t.text("token").notNull().unique(),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
-    updatedAt: t.timestamp("updated_at")
+    updatedAt: t
+      .timestamp("updated_at")
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
     ipAddress: t.text("ip_address"),
     userAgent: t.text("user_agent"),
-    userId: t.text("user_id")
+    userId: t
+      .text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
@@ -54,7 +98,8 @@ export const account = table(
     id: t.text("id").primaryKey(),
     accountId: t.text("account_id").notNull(),
     providerId: t.text("provider_id").notNull(),
-    userId: t.text("user_id")
+    userId: t
+      .text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     accessToken: t.text("access_token"),
@@ -65,7 +110,8 @@ export const account = table(
     scope: t.text("scope"),
     password: t.text("password"),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
-    updatedAt: t.timestamp("updated_at")
+    updatedAt: t
+      .timestamp("updated_at")
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
@@ -80,7 +126,8 @@ export const verification = table(
     value: t.text("value").notNull(),
     expiresAt: t.timestamp("expires_at").notNull(),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
-    updatedAt: t.timestamp("updated_at")
+    updatedAt: t
+      .timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
@@ -116,3 +163,5 @@ export type Account = typeof account.$inferSelect;
 export type NewAccount = typeof account.$inferInsert;
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
+export type UrlClicks = typeof urlClicks.$inferSelect;
+export type NewUrlClicks = typeof urlClicks.$inferInsert;
