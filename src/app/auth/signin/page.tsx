@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Chrome } from "lucide-react";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -48,8 +49,17 @@ export default function SignInPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      // Redirect to the better-auth Google OAuth endpoint
+      window.location.href = "/api/auth/signin/google";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to sign in with Google");
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
@@ -90,6 +100,25 @@ export default function SignInPage() {
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+            >
+              <Chrome className="mr-2 h-4 w-4" />
+              Google
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Don&apos;t have an account?{" "}
