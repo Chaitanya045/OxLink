@@ -1,20 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { urlClicks } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { urlClicks, urls } from "@/db/schema";
+import { eq, or } from "drizzle-orm";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ short_code: string }> }
 ) {
   try {
-    const short_code = (await params).short_code;
+    // Check if user is authenticated
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
 
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthenticated. Please sign in to view analytics." },
+        { status: 401 }
+      );
+    }
+
+    const short_code = (await params).short_code;
+    const userId = session.user.id;
+
+    // Find the URL to verify ownership
+    const [urlRecord] = await db
+      .select()
+      .from(urls)
+      .where(
+        or(eq(urls.shortCode, short_code), eq(urls.customAlias, short_code))
+      )
+      .limit(1);
+
+    if (!urlRecord) {
+      return NextResponse.json(
+        { error: "Short URL not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if the URL belongs to the authenticated user
+    if (urlRecord.createdBy !== userId) {
+      return NextResponse.json(
+        { error: "Forbidden. You do not have access to this URL's analytics." },
+        { status: 403 }
+      );
+    }
+
+    // Fetch all analytics data for this short code
     const urlClicksData = await db
       .select()
       .from(urlClicks)
-      .where(eq(urlClicks.shortCode, short_code))
-      .limit(1);
+      .where(eq(urlClicks.shortCode, short_code));
 
     return NextResponse.json({ urlClicksData });
   } catch (error) {
