@@ -64,8 +64,12 @@ export function isValidUrl(url: string): boolean {
 const KNOWN_BOT_REGEX =
   /bot|crawler|spider|crawling|slurp|bingpreview|facebookexternalhit|whatsapp|telegram|discord|embedly|quora|pinterest|slack|twitter/i;
 
-export function detectBot(userAgent: string | null): boolean {
-  if (!userAgent) return true;
+export function detectBot(userAgent: string | null | undefined): boolean {
+  // Only treat truly missing user agents (null/undefined) as bots
+  // Empty strings can be legitimate (some clients don't send user-agent headers)
+  if (userAgent === null || userAgent === undefined) {
+    return true;
+  }
 
   if (KNOWN_BOT_REGEX.test(userAgent)) {
     return true;
@@ -73,6 +77,7 @@ export function detectBot(userAgent: string | null): boolean {
 
   const ua = new UAParser(userAgent).getResult();
 
+  // If we can't parse a browser name or OS, it's likely a bot or malformed request
   if (!ua.browser?.name || !ua.os?.name) {
     return true;
   }
