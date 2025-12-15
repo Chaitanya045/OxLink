@@ -22,6 +22,13 @@
       "when": 1765737790362,
       "tag": "0002_ambiguous_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1765818422108,
+      "tag": "0003_hard_shadowcat",
+      "breakpoints": true
     }
   ]
 }

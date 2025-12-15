@@ -1,0 +1,1 @@
+ALTER TABLE "url_clicks" ALTER COLUMN "short_code" SET DATA TYPE varchar(10);

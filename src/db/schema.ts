@@ -36,7 +36,10 @@ export const urlClicks = table(
     ipAddress: t.varchar("ip_address", { length: 45 }), // IPv4 + IPv6
 
     userAgent: t.text("user_agent"),
-    shortCode: t.text("short_code").notNull().references(() => urls.shortCode),
+    shortCode: t
+      .varchar("short_code", { length: 10 })
+      .notNull()
+      .references(() => urls.shortCode),
 
     referrer: t.text("referrer"),
 

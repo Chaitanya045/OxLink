@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { UAParser } from "ua-parser-js";
 
 /**
  * Merges Tailwind CSS classes with proper precedence
@@ -58,4 +59,27 @@ export function isValidUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+const KNOWN_BOT_REGEX =
+  /bot|crawler|spider|crawling|slurp|bingpreview|facebookexternalhit|whatsapp|telegram|discord|embedly|quora|pinterest|slack|twitter/i;
+
+export function detectBot(userAgent: string | null): boolean {
+  if (!userAgent) return true;
+
+  if (KNOWN_BOT_REGEX.test(userAgent)) {
+    return true;
+  }
+
+  const ua = new UAParser(userAgent).getResult();
+
+  if (!ua.browser?.name || !ua.os?.name) {
+    return true;
+  }
+
+  if (ua.browser.name === "HeadlessChrome") {
+    return true;
+  }
+
+  return false;
 }
