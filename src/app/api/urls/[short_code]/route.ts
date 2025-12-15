@@ -29,6 +29,14 @@ export async function GET(
       );
     }
 
+    // Check if URL has expired BEFORE recording analytics
+    if (urlRecord.expiryDate && new Date(urlRecord.expiryDate) < new Date()) {
+      return NextResponse.json(
+        { error: "This short URL has expired" },
+        { status: 410 }
+      );
+    }
+
     // Record Analytics (Non-blocking)
     const ip =
       req.headers.get("cf-connecting-ip") ??
@@ -65,14 +73,6 @@ export async function GET(
     } catch (dbError) {
       console.error("Failed to record analytics:", dbError);
       // Don't block redirect if analytics fails
-    }
-
-    // Check if URL has expired
-    if (urlRecord.expiryDate && new Date(urlRecord.expiryDate) < new Date()) {
-      return NextResponse.json(
-        { error: "This short URL has expired" },
-        { status: 410 }
-      );
     }
 
     // Redirect to original URL with 302 status (temporary redirect)
