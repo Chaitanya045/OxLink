@@ -50,42 +50,49 @@ export default async function ShortCodePage({
     );
   }
 
-  // Record Analytics (Non-blocking)
-  try {
-    const headersList = await headers();
-    const ip =
-      headersList.get("cf-connecting-ip") ??
-      headersList.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const uaString = headersList.get("user-agent") ?? "";
-    const ua = new UAParser(uaString).getResult();
+  // IMPORTANT: redirect() must be outside try-catch block!
+  // In Next.js, redirect() throws a NEXT_REDIRECT error that the framework catches.
+  // If wrapped in try-catch, this special error gets caught instead of propagating,
+  // preventing the redirect from executing.
+  
+  // Record Analytics in the background (non-blocking) after redirect is initiated
+  // This allows the user to be redirected immediately without waiting for DB operations
+  (async () => {
+    try {
+      const headersList = await headers();
+      const ip =
+        headersList.get("cf-connecting-ip") ??
+        headersList.get("x-forwarded-for")?.split(",")[0]?.trim();
+      const uaString = headersList.get("user-agent") ?? "";
+      const ua = new UAParser(uaString).getResult();
 
-    // GeoIP lookup requires a database file (e.g. MaxMind).
-    // Using Vercel/Cloudflare headers if available.
-    const country =
-      headersList.get("cf-ipcountry") ?? headersList.get("x-vercel-ip-country");
-    const city = headersList.get("x-vercel-ip-city");
-    const region = headersList.get("x-vercel-ip-region");
+      // GeoIP lookup requires a database file (e.g. MaxMind).
+      // Using Vercel/Cloudflare headers if available.
+      const country =
+        headersList.get("cf-ipcountry") ?? headersList.get("x-vercel-ip-country");
+      const city = headersList.get("x-vercel-ip-city");
+      const region = headersList.get("x-vercel-ip-region");
 
-    await db.insert(urlClicks).values({
-      urlId: urlRecord.id,
-      shortCode: urlRecord.shortCode,
-      ipAddress: ip,
-      userAgent: uaString,
-      referrer: headersList.get("referer"),
-      country: country?.substring(0, 2),
-      region: region?.substring(0, 50),
-      city: city?.substring(0, 50),
-      deviceType: (ua.device.type ?? "desktop").substring(0, 20),
-      os: ua.os.name?.substring(0, 50),
-      browser: ua.browser.name?.substring(0, 50),
-      isBot: detectBot(uaString),
-    });
-    console.log("Analytics recorded for:", urlRecord.shortCode);
-  } catch (dbError) {
-    console.error("Failed to record analytics:", dbError);
-    // Don't block redirect if analytics fails
-  }
+      await db.insert(urlClicks).values({
+        urlId: urlRecord.id,
+        shortCode: urlRecord.shortCode,
+        ipAddress: ip,
+        userAgent: uaString,
+        referrer: headersList.get("referer"),
+        country: country?.substring(0, 2),
+        region: region?.substring(0, 50),
+        city: city?.substring(0, 50),
+        deviceType: (ua.device.type ?? "desktop").substring(0, 20),
+        os: ua.os.name?.substring(0, 50),
+        browser: ua.browser.name?.substring(0, 50),
+        isBot: detectBot(uaString),
+      });
+      console.log("Analytics recorded for:", urlRecord.shortCode);
+    } catch (dbError) {
+      console.error("Failed to record analytics:", dbError);
+      // Silently fail - don't block user experience
+    }
+  })();
 
-  // Redirect to original URL
   redirect(urlRecord.originalUrl);
 }
