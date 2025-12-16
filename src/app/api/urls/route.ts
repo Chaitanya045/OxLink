@@ -6,8 +6,40 @@ import {
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userUrls = await db
+      .select()
+      .from(urls)
+      .where(eq(urls.createdBy, session.user.id))
+      .orderBy(desc(urls.createdAt));
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    const data = userUrls.map((url) => ({
+      ...url,
+      shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
+    }));
+
+    return NextResponse.json({ data });
+  } catch (error) {
+    console.error("Error fetching URLs:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {

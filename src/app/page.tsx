@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,16 @@ type Session = {
   };
 };
 
+type Url = {
+  id: number;
+  shortCode: string;
+  originalUrl: string;
+  customAlias: string | null;
+  shortUrl: string;
+  expiryDate: string | null;
+  createdAt: string;
+};
+
 export default function HomePage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -33,6 +44,61 @@ export default function HomePage() {
   const [shortUrl, setShortUrl] = useState("");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [recentUrls, setRecentUrls] = useState<Url[]>([]);
+
+  const fetchRecentUrls = useCallback(async () => {
+    try {
+      const response = await fetch("/api/urls", {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRecentUrls(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch recent URLs", error);
+    }
+  }, []);
+
+  // Helper to create short URL
+  const createShortUrl = async (data: {
+    originalUrl: string;
+    customAlias?: string;
+    expiryDate?: string;
+  }) => {
+    setError("");
+    setShortUrl("");
+    setCreating(true);
+
+    try {
+      const response = await fetch("/api/urls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const resData = await response.json();
+        throw new Error(resData.error || "Failed to create short URL");
+      }
+
+      const resData = await response.json();
+      setShortUrl(resData.data.shortUrl);
+
+      // Clear form only on success
+      setOriginalUrl("");
+      setCustomAlias("");
+      setExpiryDate("");
+
+      // Refresh list
+      fetchRecentUrls();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const checkSession = useCallback(async () => {
     try {
@@ -44,64 +110,86 @@ export default function HomePage() {
         const data: Session = await response.json();
         setSession(data);
       } else {
-        router.push("/auth/signin");
+        setSession(null);
       }
     } catch {
-      router.push("/auth/signin");
+      setSession(null);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     checkSession();
   }, [checkSession]);
+
+  useEffect(() => {
+    if (session) {
+      fetchRecentUrls();
+    }
+  }, [session, fetchRecentUrls]);
+
+  // Handle pending actions after login
+  useEffect(() => {
+    if (session && !loading) {
+      const pending = localStorage.getItem("pendingShortUrl");
+      if (pending) {
+        try {
+          const data = JSON.parse(pending);
+          // Auto-submit the pending URL
+          createShortUrl(data);
+          // Clear the pending item
+          localStorage.removeItem("pendingShortUrl");
+        } catch (e) {
+          console.error("Failed to parse pending url", e);
+          localStorage.removeItem("pendingShortUrl");
+        }
+      }
+    }
+  }, [session, loading]);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/sign-out", {
       method: "POST",
       credentials: "include",
     });
-    router.push("/auth/signin");
+    // Just reload the page or clear session
+    setSession(null);
+    setRecentUrls([]);
+    router.refresh();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setShortUrl("");
-    setCreating(true);
 
-    try {
-      const response = await fetch("/api/urls", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    if (!session) {
+      // Store data and redirect to login
+      localStorage.setItem(
+        "pendingShortUrl",
+        JSON.stringify({
           originalUrl,
           customAlias: customAlias || undefined,
           expiryDate: expiryDate || undefined,
-        }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create short URL");
-      }
-
-      const data = await response.json();
-      setShortUrl(data.data.shortUrl);
-      setOriginalUrl("");
-      setCustomAlias("");
-      setExpiryDate("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setCreating(false);
+        })
+      );
+      router.push("/auth/signin");
+      return;
     }
+
+    await createShortUrl({
+      originalUrl,
+      customAlias: customAlias || undefined,
+      expiryDate: expiryDate || undefined,
+    });
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shortUrl);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const isUrlActive = (expiryDate: string | null) => {
+    if (!expiryDate) return true;
+    return new Date(expiryDate) > new Date();
   };
 
   if (loading) {
@@ -122,14 +210,27 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold">OxLink</h1>
           </div>
           <div className="flex items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              Welcome, {session?.user?.name || session?.user?.email}
-            </p>
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            {session ? (
+              <>
+                <p className="text-sm text-muted-foreground hidden sm:block">
+                  Welcome, {session.user?.name || session.user?.email}
+                </p>
+                <ThemeToggle />
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <ThemeToggle />
+                <Link href="/auth/signin">
+                  <Button variant="default" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -202,7 +303,7 @@ export default function HomePage() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={copyToClipboard}
+                      onClick={() => copyToClipboard(shortUrl)}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -211,6 +312,72 @@ export default function HomePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Recent URLs Section */}
+          {session && recentUrls.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent URLs</CardTitle>
+                <CardDescription>
+                  Your recently generated short links
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentUrls.map((url) => {
+                    const isActive = isUrlActive(url.expiryDate);
+                    return (
+                      <div
+                        key={url.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card text-card-foreground gap-4"
+                      >
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={url.shortUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-primary hover:underline truncate block"
+                            >
+                              {url.shortUrl}
+                            </a>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => copyToClipboard(url.shortUrl)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p
+                            className="text-sm text-muted-foreground truncate"
+                            title={url.originalUrl}
+                          >
+                            {url.originalUrl}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
+                          <span
+                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              isActive
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            }`}
+                          >
+                            {isActive ? "Active" : "Inactive"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(url.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
