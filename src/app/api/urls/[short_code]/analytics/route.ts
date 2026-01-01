@@ -4,6 +4,8 @@ import { urlClicks, urls } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ short_code: string }> }

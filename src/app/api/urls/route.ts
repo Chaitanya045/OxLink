@@ -9,6 +9,8 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth.api.getSession({
