@@ -5,6 +5,8 @@ import { eq, or } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { detectBot } from "../../../../lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ short_code: string }> }
