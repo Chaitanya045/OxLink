@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Copy, Link as LinkIcon, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { signOut } from "@/lib/auth-client";
 
 type Session = {
   user?: {
@@ -149,14 +150,16 @@ export default function HomePage() {
   }, [session, loading]);
 
   const handleSignOut = async () => {
-    await fetch("/api/auth/sign-out", {
-      method: "POST",
-      credentials: "include",
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          // Clear local state
+          setSession(null);
+          setRecentUrls([]);
+          router.refresh();
+        },
+      },
     });
-    // Just reload the page or clear session
-    setSession(null);
-    setRecentUrls([]);
-    router.refresh();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
