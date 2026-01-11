@@ -46,15 +46,17 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [recentUrls, setRecentUrls] = useState<Url[]>([]);
+  const [totalUrlCount, setTotalUrlCount] = useState(0);
 
   const fetchRecentUrls = useCallback(async () => {
     try {
-      const response = await fetch("/api/urls", {
+      const response = await fetch("/api/urls?page=1&limit=3", {
         credentials: "include",
       });
       if (response.ok) {
         const data = await response.json();
         setRecentUrls(data.data);
+        setTotalUrlCount(data.pagination.totalCount);
       }
     } catch (error) {
       console.error("Failed to fetch recent URLs", error);
@@ -249,7 +251,7 @@ export default function HomePage() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
+                  <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20">
                     {error}
                   </div>
                 )}
@@ -320,14 +322,25 @@ export default function HomePage() {
           {session && recentUrls.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Recent URLs</CardTitle>
-                <CardDescription>
-                  Your recently generated short links
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Recent URLs</CardTitle>
+                    <CardDescription>
+                      Your recently generated short links
+                    </CardDescription>
+                  </div>
+                  {totalUrlCount > 3 && (
+                    <Link href="/dashboard">
+                      <Button variant="outline" size="sm">
+                        View More
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentUrls.map((url) => {
+                  {recentUrls.slice(0, 3).map((url) => {
                     const isActive = isUrlActive(url.expiryDate);
                     return (
                       <div

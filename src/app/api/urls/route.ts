@@ -20,11 +20,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get pagination parameters from query string
+    const searchParams = req.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const offset = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalUrls = await db
+      .select()
+      .from(urls)
+      .where(eq(urls.createdBy, session.user.id));
+
+    const totalCount = totalUrls.length;
+
+    // Get paginated URLs
     const userUrls = await db
       .select()
       .from(urls)
       .where(eq(urls.createdBy, session.user.id))
-      .orderBy(desc(urls.createdAt));
+      .orderBy(desc(urls.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -33,7 +50,15 @@ export async function GET(req: NextRequest) {
       shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
     }));
 
-    return NextResponse.json({ data });
+    return NextResponse.json({
+      data,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
   } catch (error) {
     console.error("Error fetching URLs:", error);
     return NextResponse.json(
