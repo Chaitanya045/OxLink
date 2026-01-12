@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
             Dashboard
           </Link>
           <span>/</span>
-          <span className="text-foreground">Link Details</span>
+          <span className="text-foreground">Analytics</span>
         </div>
 
         {/* Header */}
