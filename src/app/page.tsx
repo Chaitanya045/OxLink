@@ -1,6 +1,5 @@
 "use client";
 
-import { Navbar } from "@/components/home/Navbar";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UrlShortenerForm } from "@/components/home/UrlShortenerForm";
 import { RecentLinks } from "@/components/home/RecentLinks";
@@ -28,9 +27,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <Navbar isLoggedIn={!!session} />
-
       {/* Main Content */}
       <main className="flex-1">
         {/* Hero Section */}
