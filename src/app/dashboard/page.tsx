@@ -442,45 +442,102 @@ export default function DashboardPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+        {totalPages > 1 && (() => {
+          // Calculate which page numbers to show
+          const getPageNumbers = () => {
+            const pages: (number | string)[] = [];
+            const maxVisible = 5;
+            
+            if (totalPages <= maxVisible) {
+              // Show all pages if total is 5 or less
+              for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+              }
+            } else {
+              // Always show first page
+              pages.push(1);
+              
+              let startPage = Math.max(2, currentPage - 1);
+              let endPage = Math.min(totalPages - 1, currentPage + 1);
+              
+              // Adjust window if we're near the start
+              if (currentPage <= 3) {
+                endPage = Math.min(4, totalPages - 1);
+              }
+              
+              // Adjust window if we're near the end
+              if (currentPage >= totalPages - 2) {
+                startPage = Math.max(2, totalPages - 3);
+              }
+              
+              // Add ellipsis after first page if needed
+              if (startPage > 2) {
+                pages.push("...");
+              }
+              
+              // Add pages in the window
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(i);
+              }
+              
+              // Add ellipsis before last page if needed
+              if (endPage < totalPages - 1) {
+                pages.push("...");
+              }
+              
+              // Always show last page
+              pages.push(totalPages);
+            }
+            
+            return pages;
+          };
+          
+          const pageNumbers = getPageNumbers();
+          
+          return (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-              const pageNum = i + 1;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "default" : "outline"}
-                  size="icon"
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
+              {pageNumbers.map((page, index) => {
+                if (page === "...") {
+                  return (
+                    <span key={`ellipsis-${index}`} className="text-muted-foreground px-2">
+                      ...
+                    </span>
+                  );
+                }
+                
+                const pageNum = page as number;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
 
-            {totalPages > 5 && (
-              <span className="text-muted-foreground">...</span>
-            )}
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
