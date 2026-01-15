@@ -56,10 +56,10 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
     const totalClicks = last7Days.length;
     const previousPeriodClicks = previous7Days.length;
 
-    // Unique visitors
+    // Unique visitors (from all clicks)
     const uniqueIps = new Set(clicks.map((c) => c.ipAddress).filter(Boolean)).size;
 
-    // Device breakdown
+    // Device breakdown (from all clicks for comprehensive view)
     const deviceBreakdown: Record<string, number> = {};
     clicks.forEach((click) => {
       const device = click.deviceType || "Unknown";
@@ -74,9 +74,9 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
       })
     );
 
-    // Location breakdown
+    // Location breakdown (from last 7 days to match totalClicks)
     const locationBreakdown: Record<string, number> = {};
-    clicks.forEach((click) => {
+    last7Days.forEach((click) => {
       const country = click.country || "Unknown";
       locationBreakdown[country] = (locationBreakdown[country] || 0) + 1;
     });
@@ -86,16 +86,16 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    const topLocation: TopLocation = locationData.length > 0
+    const topLocation: TopLocation = locationData.length > 0 && totalClicks > 0
       ? {
           name: locationData[0].country,
-          percentage: Math.round((locationData[0].count / total) * 100),
+          percentage: Math.round((locationData[0].count / totalClicks) * 100),
         }
       : { name: "", percentage: 0 };
 
-    // Referrer breakdown
+    // Referrer breakdown (from last 7 days to match totalClicks)
     const referrerBreakdown: Record<string, number> = {};
-    clicks.forEach((click) => {
+    last7Days.forEach((click) => {
       let source = "Direct / Email";
       if (click.referrer) {
         try {
@@ -120,10 +120,10 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    const topReferrer: TopReferrer = referrerData.length > 0
+    const topReferrer: TopReferrer = referrerData.length > 0 && totalClicks > 0
       ? {
           name: referrerData[0].source,
-          percentage: Math.round((referrerData[0].count / total) * 100),
+          percentage: Math.round((referrerData[0].count / totalClicks) * 100),
         }
       : { name: "", percentage: 0 };
 
