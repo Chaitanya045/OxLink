@@ -71,7 +71,7 @@ export function AnalyticsCharts({
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={deviceData}
+                data={deviceData as unknown as Array<Record<string, unknown>>}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}

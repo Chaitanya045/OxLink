@@ -39,7 +39,7 @@ export function useDashboard(): UseDashboardReturn {
         const cached = pageCache.current.get(page)!;
         setUrls(cached.data);
         setPaginationData({
-          page: cached.totalPages,
+          page: page,
           limit: URLS_PER_PAGE,
           totalCount: cached.totalCount,
           totalPages: cached.totalPages,

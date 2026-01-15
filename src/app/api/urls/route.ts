@@ -22,8 +22,15 @@ export async function GET(req: NextRequest) {
 
     // Get pagination parameters from query string
     const searchParams = req.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+    
+    // Validate and parse page parameter (default to 1, minimum 1)
+    const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+    
+    // Validate and parse limit parameter (default to 10, minimum 1, maximum 100)
+    const limit = Math.min(100, Math.max(1, parseInt(limitParam || "10", 10) || 10));
+    
     const offset = (page - 1) * limit;
 
     // Get total count for pagination
