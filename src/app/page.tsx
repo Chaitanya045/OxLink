@@ -43,12 +43,6 @@ export default function HomePage() {
     }
   };
 
-  const handleGetStarted = () => {
-    // Scroll to the form
-    const formElement = document.getElementById("url-shortener-form");
-    formElement?.scrollIntoView({ behavior: "smooth" });
-  };
-
   if (sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -60,7 +54,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
-      <Navbar isLoggedIn={!!session} onGetStarted={handleGetStarted} />
+      <Navbar isLoggedIn={!!session} />
 
       {/* Main Content */}
       <main className="flex-1">

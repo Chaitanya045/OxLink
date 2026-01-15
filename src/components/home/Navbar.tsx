@@ -1,14 +1,41 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LinkIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LinkIcon, User, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { signOut } from "@/lib/auth-client";
 
 interface NavbarProps {
   isLoggedIn: boolean;
-  onGetStarted?: () => void;
 }
 
-export function Navbar({ isLoggedIn, onGetStarted }: NavbarProps) {
+export function Navbar({ isLoggedIn }: NavbarProps) {
+  const handleSignOut = async () => {
+    try {
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            // Clear any local storage items
+            localStorage.removeItem("pendingShortUrl");
+            // Redirect to home page with full reload
+            window.location.href = "/";
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      // Even if there's an error, redirect to home page
+      window.location.href = "/";
+    }
+  };
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -23,23 +50,27 @@ export function Navbar({ isLoggedIn, onGetStarted }: NavbarProps) {
 
           {/* Navigation */}
           <div className="flex items-center gap-6">
-            <Link
-              href="#features"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-            >
-              Features
-            </Link>
-            <Link
-              href="#pricing"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-            >
-              Pricing
-            </Link>
-            <ThemeToggle />
             {isLoggedIn ? (
-              <Link href="/dashboard">
-                <Button size="sm">Dashboard</Button>
-              </Link>
+              <>
+                <Link href="/dashboard">
+                  <Button size="sm">Dashboard</Button>
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <User className="h-5 w-5" />
+                      <span className="sr-only">Profile menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <ThemeToggle />
+              </>
             ) : (
               <>
                 <Link href="/auth/signin">
@@ -47,9 +78,7 @@ export function Navbar({ isLoggedIn, onGetStarted }: NavbarProps) {
                     Login
                   </Button>
                 </Link>
-                <Button size="sm" onClick={onGetStarted}>
-                  Get Started
-                </Button>
+                <ThemeToggle />
               </>
             )}
           </div>
