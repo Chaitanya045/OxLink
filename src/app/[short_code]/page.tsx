@@ -1,10 +1,11 @@
-import { redirect, RedirectType } from "next/navigation";
+import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { urls, urlClicks } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { detectBot } from "@/lib/utils";
+import { ShortUrlError } from "@/components/short-url/ShortUrlError";
 
 export default async function ShortCodePage({
   params,
@@ -25,29 +26,16 @@ export default async function ShortCodePage({
   // If URL not found
   if (!urlRecord) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">404</h1>
-          <p className="text-muted-foreground">
-            Short URL &quot;{short_code}&quot; not found
-          </p>
-        </div>
-      </div>
+      <ShortUrlError
+        code="404"
+        message={`Short URL "${short_code}" not found`}
+      />
     );
   }
 
   // Check if URL has expired
   if (urlRecord.expiryDate && new Date(urlRecord.expiryDate) < new Date()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">410</h1>
-          <p className="text-muted-foreground">
-            This short URL has expired
-          </p>
-        </div>
-      </div>
-    );
+    return <ShortUrlError code="410" message="This short URL has expired" />;
   }
 
   // IMPORTANT: redirect() must be outside try-catch block!

@@ -1,47 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSession } from "@/hooks/useSession";
-import { useRecentUrls } from "@/hooks/useRecentUrls";
 import { Navbar } from "@/components/home/Navbar";
 import { HeroSection } from "@/components/home/HeroSection";
 import { UrlShortenerForm } from "@/components/home/UrlShortenerForm";
 import { RecentLinks } from "@/components/home/RecentLinks";
 import { Footer } from "@/components/home/Footer";
+import { useHome } from "@/hooks/useHome";
 
 export default function HomePage() {
-  const { session, loading: sessionLoading, checkSession } = useSession();
-  const { recentUrls, loading: urlsLoading, fetchRecentUrls } = useRecentUrls();
-
-  // Check session on mount
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
-
-  // Fetch recent URLs when session is available
-  useEffect(() => {
-    if (session) {
-      fetchRecentUrls();
-    }
-  }, [session, fetchRecentUrls]);
-
-  // Handle pending URL creation after login
-  useEffect(() => {
-    if (session && !sessionLoading) {
-      const pending = localStorage.getItem("pendingShortUrl");
-      if (pending) {
-        localStorage.removeItem("pendingShortUrl");
-        // The form will handle this through its own state
-      }
-    }
-  }, [session, sessionLoading]);
-
-  const handleUrlCreated = () => {
-    // Refresh recent URLs list
-    if (session) {
-      fetchRecentUrls();
-    }
-  };
+  const {
+    session,
+    sessionLoading,
+    recentUrls,
+    urlsLoading,
+    pendingUrlData,
+    handleUrlCreated,
+    onPendingDataHandled,
+  } = useHome();
 
   if (sessionLoading) {
     return (
@@ -63,7 +38,12 @@ export default function HomePage() {
 
         {/* URL Shortener Form */}
         <div id="url-shortener-form">
-          <UrlShortenerForm session={session} onUrlCreated={handleUrlCreated} />
+          <UrlShortenerForm
+            session={session}
+            onUrlCreated={handleUrlCreated}
+            pendingUrlData={pendingUrlData}
+            onPendingDataHandled={onPendingDataHandled}
+          />
         </div>
 
         {/* Recent Links */}

@@ -1,12 +1,5 @@
 import { useState, useCallback } from "react";
-
-export interface Session {
-  user?: {
-    id: string;
-    email: string;
-    name?: string;
-  };
-}
+import type { Session } from "@/types/dashboard";
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);

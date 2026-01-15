@@ -1,14 +1,5 @@
 import { useState, useCallback } from "react";
-
-export interface Url {
-  id: number;
-  shortCode: string;
-  originalUrl: string;
-  customAlias: string | null;
-  shortUrl: string;
-  expiryDate: string | null;
-  createdAt: string;
-}
+import type { Url } from "@/types/dashboard";
 
 interface CreateUrlData {
   originalUrl: string;

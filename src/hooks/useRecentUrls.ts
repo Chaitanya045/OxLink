@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { Url } from "./useUrlShortener";
+import type { Url } from "@/types/dashboard";
 
 export function useRecentUrls() {
   const [recentUrls, setRecentUrls] = useState<Url[]>([]);

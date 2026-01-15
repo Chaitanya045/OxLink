@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkIcon, Zap, ChevronDown } from "lucide-react";
 import { useUrlShortener } from "@/hooks/useUrlShortener";
-import type { Session } from "@/hooks/useSession";
+import type { Session } from "@/types/dashboard";
 
 interface UrlShortenerFormProps {
   session: Session | null;
   onUrlCreated?: () => void;
+  pendingUrlData?: { originalUrl: string; customAlias?: string } | null;
+  onPendingDataHandled?: () => void;
 }
 
 export function UrlShortenerForm({
   session,
   onUrlCreated,
+  pendingUrlData,
+  onPendingDataHandled,
 }: UrlShortenerFormProps) {
   const router = useRouter();
   const [originalUrl, setOriginalUrl] = useState("");
@@ -24,6 +28,33 @@ export function UrlShortenerForm({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const { shortUrl, error, creating, createShortUrl, resetState } =
     useUrlShortener();
+
+  // Auto-submit pending URL data when session becomes available
+  useEffect(() => {
+    if (session && pendingUrlData && !creating && !shortUrl) {
+      const submitPendingUrl = async () => {
+        try {
+          await createShortUrl({
+            originalUrl: pendingUrlData.originalUrl,
+            customAlias: pendingUrlData.customAlias,
+          });
+          // Clear form state
+          setOriginalUrl("");
+          setCustomAlias("");
+          setShowAdvanced(false);
+          // Notify parent that pending data was handled
+          onPendingDataHandled?.();
+          // Notify parent of URL creation
+          onUrlCreated?.();
+        } catch (err) {
+          // Error is handled by the hook
+          // Still notify parent that we attempted to handle pending data
+          onPendingDataHandled?.();
+        }
+      };
+      submitPendingUrl();
+    }
+  }, [session, pendingUrlData, creating, shortUrl, createShortUrl, onPendingDataHandled, onUrlCreated]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
