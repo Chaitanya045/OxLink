@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { urls } from "@/db/schema";
+import { urls, urlClicks } from "@/db/schema";
 import {
   generateShortCode,
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -50,11 +50,36 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .offset(offset);
 
+    // Get click counts for these URLs
+    const shortCodes = userUrls.map((url) => url.shortCode);
+    const clickCountsMap = new Map<string, number>();
+    
+    if (shortCodes.length > 0) {
+      const clickCounts = await db
+        .select({
+          shortCode: urlClicks.shortCode,
+          count: sql<number>`COUNT(*)`.as('count'),
+        })
+        .from(urlClicks)
+        .where(inArray(urlClicks.shortCode, shortCodes))
+        .groupBy(urlClicks.shortCode);
+      
+      clickCounts.forEach((row) => {
+        clickCountsMap.set(row.shortCode, Number(row.count));
+      });
+    }
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     const data = userUrls.map((url) => ({
-      ...url,
+      id: url.id,
+      shortCode: url.shortCode,
+      originalUrl: url.originalUrl,
+      customAlias: url.customAlias,
+      createdAt: url.createdAt,
+      expiryDate: url.expiryDate,
       shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
+      clickCount: clickCountsMap.get(url.shortCode) ?? 0,
     }));
 
     return NextResponse.json({

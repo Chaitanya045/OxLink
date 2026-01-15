@@ -90,7 +90,7 @@ export function RecentLinkItem({ url }: RecentLinkItemProps) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-sm">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">24 clicks</span>
+              <span className="font-medium">{url.clickCount ?? 0} clicks</span>
             </div>
             <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted text-xs">
               <QrCode className="h-3 w-3" />

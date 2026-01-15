@@ -31,7 +31,7 @@ export default function DashboardPage() {
   }
 
   // Calculate stats
-  const totalClicks = 1240; // This would come from analytics API
+  const totalClicks = urls.reduce((sum, url) => sum + (url.clickCount ?? 0), 0);
   const topPerforming = urls.length > 0 ? urls[0] : null;
 
   return (

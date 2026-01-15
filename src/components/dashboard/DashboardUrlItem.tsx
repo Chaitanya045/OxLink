@@ -62,7 +62,7 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
             >
               <Button variant="ghost" size="sm">
                 <BarChart3 className="h-4 w-4 mr-2" />
-                <span className="font-semibold">842</span>
+                <span className="font-semibold">{url.clickCount ?? 0}</span>
               </Button>
             </Link>
             <Button variant="ghost" size="icon">

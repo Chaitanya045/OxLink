@@ -38,7 +38,7 @@ export function AnalyticsLocationList({
                 <div
                   className="bg-primary h-2 rounded-full"
                   style={{
-                    width: `${(location.count / totalClicks) * 100}%`,
+                    width: `${totalClicks > 0 ? (location.count / totalClicks) * 100 : 0}%`,
                   }}
                 />
               </div>
