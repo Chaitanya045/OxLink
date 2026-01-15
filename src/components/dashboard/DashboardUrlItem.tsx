@@ -41,9 +41,7 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Link
-                    href={url.originalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/${url.customAlias || url.shortCode}`}
                     onClick={(e) => e.stopPropagation()}
                     className="text-primary font-medium hover:underline"
                   >
