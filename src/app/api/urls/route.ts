@@ -98,6 +98,7 @@ export async function GET(req: NextRequest) {
       originalUrl: url.originalUrl,
       customAlias: url.customAlias,
       createdAt: url.createdAt,
+      updatedAt: url.updatedAt,
       expiryDate: url.expiryDate,
       shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
       clickCount: clickCountsMap.get(url.id) ?? 0,
@@ -225,6 +226,7 @@ export async function POST(req: NextRequest) {
           }/${newUrl.customAlias || newUrl.shortCode}`,
           expiryDate: newUrl.expiryDate,
           createdAt: newUrl.createdAt,
+          updatedAt: newUrl.updatedAt,
         },
       },
       { status: 201 }

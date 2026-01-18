@@ -10,6 +10,11 @@ export const urls = table(
     originalUrl: t.text("original_url").notNull(),
     customAlias: t.varchar("custom_alias", { length: 50 }),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
+    updatedAt: t
+      .timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
     expiryDate: t.timestamp("expiry_date"),
     version: t.integer("version").default(1).notNull(),
     isLatest: t.boolean("is_latest").default(true).notNull(),

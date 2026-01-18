@@ -14,6 +14,7 @@ export interface Url {
   shortUrl: string;
   expiryDate: string | null;
   createdAt: string;
+  updatedAt?: string;
   clickCount?: number;
   version?: number;
   isLatest?: boolean;

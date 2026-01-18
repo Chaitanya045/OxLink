@@ -5,11 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Copy, BarChart3, QrCode, Edit, Trash2, Link2 } from "lucide-react";
+import { Copy, BarChart3, QrCode, Edit, Link2 } from "lucide-react";
 import type { Url } from "@/types/dashboard";
-import { isUrlActive, getTimeSince, copyToClipboard } from "@/lib/analytics-utils";
+import { isUrlActive, getTimeSinceWithLabel, copyToClipboard } from "@/lib/analytics-utils";
 import { EditUrlModal } from "./EditUrlModal";
 import { QrCodeModal } from "./QrCodeModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DashboardUrlItemProps {
   url: Url;
@@ -112,7 +118,7 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                {getTimeSince(url.createdAt)}
+                {getTimeSinceWithLabel(url.createdAt, url.updatedAt)}
               </p>
             </div>
 
@@ -128,9 +134,24 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center h-10 w-10 cursor-pointer">
+                      <div
+                        className={`h-3 w-3 rounded-full ${
+                          isActive
+                            ? "bg-green-500 animate-pulse"
+                            : "bg-gray-400"
+                        }`}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isActive ? "Active" : "Inactive"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardContent>
