@@ -7,9 +7,10 @@ import type { Url } from "@/types/dashboard";
 interface DashboardUrlListProps {
   urls: Url[];
   fetchingUrls: boolean;
+  onUrlUpdated?: () => void;
 }
 
-export function DashboardUrlList({ urls, fetchingUrls }: DashboardUrlListProps) {
+export function DashboardUrlList({ urls, fetchingUrls, onUrlUpdated }: DashboardUrlListProps) {
   if (fetchingUrls) {
     return (
       <div className="text-center py-12">
@@ -36,7 +37,7 @@ export function DashboardUrlList({ urls, fetchingUrls }: DashboardUrlListProps) 
   return (
     <div className="space-y-3">
       {urls.map((url) => (
-        <DashboardUrlItem key={url.id} url={url} />
+        <DashboardUrlItem key={url.id} url={url} onUrlUpdated={onUrlUpdated} />
       ))}
     </div>
   );

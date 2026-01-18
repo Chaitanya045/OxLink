@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { urls, urlClicks } from "@/db/schema";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all user's URLs
+    // Get all user's URLs (only latest versions)
     const userUrls = await db
       .select({
         id: urls.id,
@@ -26,7 +26,12 @@ export async function GET(req: NextRequest) {
         expiryDate: urls.expiryDate,
       })
       .from(urls)
-      .where(eq(urls.createdBy, session.user.id));
+      .where(
+        and(
+          eq(urls.createdBy, session.user.id),
+          eq(urls.isLatest, true)
+        )
+      );
 
     if (userUrls.length === 0) {
       return NextResponse.json({

@@ -6,17 +6,21 @@ export const urls = table(
   "urls",
   {
     id: t.integer().primaryKey().generatedAlwaysAsIdentity(),
-    shortCode: t.varchar("short_code", { length: 10 }).notNull().unique(),
+    shortCode: t.varchar("short_code", { length: 10 }).notNull(),
     originalUrl: t.text("original_url").notNull(),
     customAlias: t.varchar("custom_alias", { length: 50 }),
     createdAt: t.timestamp("created_at").defaultNow().notNull(),
     expiryDate: t.timestamp("expiry_date"),
+    version: t.integer("version").default(1).notNull(),
+    isLatest: t.boolean("is_latest").default(true).notNull(),
     createdBy: t
       .text("created_by")
       .notNull()
       .references(() => user.id),
   },
-  (table) => [t.uniqueIndex("short_code_idx").on(table.shortCode)]
+  (table) => [
+    t.uniqueIndex("short_code_version_idx").on(table.shortCode, table.version),
+  ]
 );
 
 export const urlClicks = table(
@@ -38,8 +42,7 @@ export const urlClicks = table(
     userAgent: t.text("user_agent"),
     shortCode: t
       .varchar("short_code", { length: 10 })
-      .notNull()
-      .references(() => urls.shortCode),
+      .notNull(),
 
     referrer: t.text("referrer"),
 

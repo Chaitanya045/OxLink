@@ -29,6 +29,13 @@
       "when": 1765818422108,
       "tag": "0003_hard_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1768726769525,
+      "tag": "0004_jazzy_ricochet",
+      "breakpoints": true
     }
   ]
 }

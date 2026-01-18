@@ -6,7 +6,7 @@ import {
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq, desc, sql, inArray } from "drizzle-orm";
+import { eq, desc, sql, inArray, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -33,19 +33,29 @@ export async function GET(req: NextRequest) {
     
     const offset = (page - 1) * limit;
 
-    // Get total count for pagination
+    // Get total count for pagination (only latest versions)
     const totalUrls = await db
       .select()
       .from(urls)
-      .where(eq(urls.createdBy, session.user.id));
+      .where(
+        and(
+          eq(urls.createdBy, session.user.id),
+          eq(urls.isLatest, true)
+        )
+      );
 
     const totalCount = totalUrls.length;
 
-    // Get paginated URLs
+    // Get paginated URLs (only latest versions)
     const userUrls = await db
       .select()
       .from(urls)
-      .where(eq(urls.createdBy, session.user.id))
+      .where(
+        and(
+          eq(urls.createdBy, session.user.id),
+          eq(urls.isLatest, true)
+        )
+      )
       .orderBy(desc(urls.createdAt))
       .limit(limit)
       .offset(offset);
@@ -134,7 +144,8 @@ export async function POST(req: NextRequest) {
     // Generate short code from URL using SHA-256
     let shortCode = generateShortCode(originalUrl);
 
-    // Check if short code already exists (hash collision)
+    // Check if short code already exists (hash collision) - check all versions
+    // We need to check all versions because shortCode+version is unique, not just shortCode
     let existingUrl = await db
       .select()
       .from(urls)
@@ -151,12 +162,17 @@ export async function POST(req: NextRequest) {
         .limit(1);
     }
 
-    // If custom alias provided, validate it
+    // If custom alias provided, validate it (check only latest versions)
     if (customAlias) {
       const existingAlias = await db
         .select()
         .from(urls)
-        .where(eq(urls.customAlias, customAlias))
+        .where(
+          and(
+            eq(urls.customAlias, customAlias),
+            eq(urls.isLatest, true)
+          )
+        )
         .limit(1);
 
       if (existingAlias.length > 0) {
@@ -178,6 +194,8 @@ export async function POST(req: NextRequest) {
         shortCode,
         customAlias: customAlias || null,
         expiryDate: parsedExpiryDate,
+        version: 1,
+        isLatest: true,
         createdBy: session.user.id,
       })
       .returning();

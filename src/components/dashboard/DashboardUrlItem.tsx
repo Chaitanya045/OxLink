@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -7,13 +8,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Copy, BarChart3, QrCode, Edit, Trash2, Link2 } from "lucide-react";
 import type { Url } from "@/types/dashboard";
 import { isUrlActive, getTimeSince, copyToClipboard } from "@/lib/analytics-utils";
+import { EditUrlModal } from "./EditUrlModal";
 
 interface DashboardUrlItemProps {
   url: Url;
+  onUrlUpdated?: () => void;
 }
 
-export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
+export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
   const router = useRouter();
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const isActive = isUrlActive(url.expiryDate);
   const analyticsUrl = `/analytics/${url.customAlias || url.shortCode}`;
 
@@ -26,11 +30,24 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
     e.stopPropagation();
   };
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    handleActionClick(e);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    if (onUrlUpdated) {
+      onUrlUpdated();
+    }
+  };
+
   return (
-    <Card 
-      className="hover:bg-accent/50 transition-colors cursor-pointer"
-      onClick={handleCardClick}
-    >
+    <>
+      <Card 
+        className="hover:bg-accent/50 transition-colors cursor-pointer"
+        onClick={handleCardClick}
+      >
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             {/* Icon */}
@@ -101,7 +118,7 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
               <Button variant="ghost" size="icon">
                 <QrCode className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleEditClick}>
                 <Edit className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon">
@@ -111,5 +128,12 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
           </div>
         </CardContent>
       </Card>
+      <EditUrlModal
+        url={url}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSuccess={handleEditSuccess}
+      />
+    </>
   );
 }

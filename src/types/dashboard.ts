@@ -15,6 +15,8 @@ export interface Url {
   expiryDate: string | null;
   createdAt: string;
   clickCount?: number;
+  version?: number;
+  isLatest?: boolean;
 }
 
 export interface PaginationData {

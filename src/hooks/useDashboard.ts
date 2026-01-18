@@ -133,7 +133,8 @@ export function useDashboard(): UseDashboardReturn {
   const clearCacheAndRefresh = useCallback(() => {
     pageCache.current.clear();
     fetchUrls(currentPage);
-  }, [fetchUrls, currentPage]);
+    fetchStats();
+  }, [fetchUrls, fetchStats, currentPage]);
 
   useEffect(() => {
     checkSession();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { urlClicks, urls } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +26,15 @@ export async function GET(
     const short_code = (await params).short_code;
     const userId = session.user.id;
 
-    // Find the URL to verify ownership
+    // Find the URL to verify ownership (only latest version)
     const [urlRecord] = await db
       .select()
       .from(urls)
       .where(
-        or(eq(urls.shortCode, short_code), eq(urls.customAlias, short_code))
+        and(
+          or(eq(urls.shortCode, short_code), eq(urls.customAlias, short_code)),
+          eq(urls.isLatest, true)
+        )
       )
       .limit(1);
 

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { urls, urlClicks } from "@/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { UAParser } from "ua-parser-js";
 import { detectBot } from "@/lib/utils";
 import { ShortUrlError } from "@/components/short-url/ShortUrlError";
@@ -14,12 +14,15 @@ export default async function ShortCodePage({
 }) {
   const { short_code } = await params;
 
-  // Find URL by short code or custom alias
+  // Find URL by short code or custom alias (only latest version)
   const [urlRecord] = await db
     .select()
     .from(urls)
     .where(
-      or(eq(urls.shortCode, short_code), eq(urls.customAlias, short_code))
+      and(
+        or(eq(urls.shortCode, short_code), eq(urls.customAlias, short_code)),
+        eq(urls.isLatest, true)
+      )
     )
     .limit(1);
 

@@ -18,6 +18,7 @@ export default function DashboardPage() {
     pagination,
     lastUpdated,
     stats,
+    clearCacheAndRefresh,
   } = useDashboard();
 
   if (loading) {
@@ -45,7 +46,11 @@ export default function DashboardPage() {
 
         <DashboardSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-        <DashboardUrlList urls={urls} fetchingUrls={fetchingUrls} />
+        <DashboardUrlList 
+          urls={urls} 
+          fetchingUrls={fetchingUrls}
+          onUrlUpdated={clearCacheAndRefresh}
+        />
 
         <Pagination
           currentPage={pagination.currentPage}
