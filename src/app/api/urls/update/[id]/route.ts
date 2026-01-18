@@ -80,6 +80,9 @@ export async function PATCH(
 
       // Create new version
       const parsedExpiryDate = expiryDate ? new Date(expiryDate) : currentUrl.expiryDate;
+      const now = new Date();
+      // Set updatedAt slightly after createdAt to indicate this is an update
+      const updatedAtTime = new Date(now.getTime() + 1000);
 
       const [newVersion] = await db
         .insert(urls)
@@ -87,6 +90,8 @@ export async function PATCH(
           shortCode: currentUrl.shortCode,
           originalUrl: originalUrl,
           customAlias: currentUrl.customAlias,
+          createdAt: now,
+          updatedAt: updatedAtTime,
           expiryDate: parsedExpiryDate,
           version: nextVersion,
           isLatest: true,
@@ -118,7 +123,10 @@ export async function PATCH(
 
       const [updatedUrl] = await db
         .update(urls)
-        .set({ expiryDate: parsedExpiryDate })
+        .set({ 
+          expiryDate: parsedExpiryDate,
+          updatedAt: new Date(), // Explicitly set updatedAt
+        })
         .where(eq(urls.id, urlId))
         .returning();
 

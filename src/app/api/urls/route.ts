@@ -6,7 +6,7 @@ import {
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq, desc, sql, inArray, and, or, ilike } from "drizzle-orm";
+import { eq, desc, asc, sql, inArray, and, or, ilike, isNull, gt, lte, isNotNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,9 @@ export async function GET(req: NextRequest) {
     const pageParam = searchParams.get("page");
     const limitParam = searchParams.get("limit");
     const searchParam = searchParams.get("search")?.trim() || "";
+    const statusParam = searchParams.get("status")?.trim() || "all";
+    const sortByParam = searchParams.get("sortBy")?.trim() || "date";
+    const sortOrderParam = searchParams.get("sortOrder")?.trim() || "desc";
     
     // Validate and parse page parameter (default to 1, minimum 1)
     const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
@@ -40,12 +43,33 @@ export async function GET(req: NextRequest) {
       eq(urls.isLatest, true)
     );
 
+    // Add status filter conditions
+    let statusConditions = undefined;
+    if (statusParam === "active") {
+      // Active: expiryDate IS NULL OR expiryDate > NOW()
+      statusConditions = or(
+        isNull(urls.expiryDate),
+        gt(urls.expiryDate, sql`NOW()`)
+      );
+    } else if (statusParam === "inactive") {
+      // Inactive: expiryDate IS NOT NULL AND expiryDate <= NOW()
+      statusConditions = and(
+        isNotNull(urls.expiryDate),
+        lte(urls.expiryDate, sql`NOW()`)
+      );
+    }
+    // For "all", no status filter is applied
+
+    // Combine base conditions with status conditions
+    let whereConditions = statusConditions
+      ? and(baseConditions, statusConditions)
+      : baseConditions;
+
     // Add search conditions if search term is provided
-    let whereConditions = baseConditions;
     if (searchParam) {
       const searchPattern = `%${searchParam}%`;
       whereConditions = and(
-        baseConditions,
+        whereConditions,
         or(
           ilike(urls.shortCode, searchPattern),
           ilike(urls.customAlias, searchPattern),
@@ -62,32 +86,56 @@ export async function GET(req: NextRequest) {
 
     const totalCount = totalUrls.length;
 
-    // Get paginated URLs (with search filter if applicable)
-    const userUrls = await db
-      .select()
-      .from(urls)
-      .where(whereConditions)
-      .orderBy(desc(urls.createdAt))
-      .limit(limit)
-      .offset(offset);
-
-    // Get click counts for these URLs (by urlId, not shortCode)
-    const urlIds = userUrls.map((url) => url.id);
+    // Get all URL IDs that match the filters (for click counting)
+    const allUrlIds = totalUrls.map((url) => url.id);
+    
+    // Get click counts for all matching URLs
     const clickCountsMap = new Map<number, number>();
     
-    if (urlIds.length > 0) {
+    if (allUrlIds.length > 0) {
       const clickCounts = await db
         .select({
           urlId: urlClicks.urlId,
           count: sql<number>`COUNT(*)`.as('count'),
         })
         .from(urlClicks)
-        .where(inArray(urlClicks.urlId, urlIds))
+        .where(inArray(urlClicks.urlId, allUrlIds))
         .groupBy(urlClicks.urlId);
       
       clickCounts.forEach((row) => {
         clickCountsMap.set(row.urlId, Number(row.count));
       });
+    }
+
+    // Get paginated URLs with appropriate sorting
+    let userUrls;
+    
+    if (sortByParam === "clicks") {
+      // For clicks sorting, we need to sort all filtered URLs by click count, then paginate
+      const allFilteredUrls = await db
+        .select()
+        .from(urls)
+        .where(whereConditions);
+      
+      // Sort by click count
+      const sortedUrls = allFilteredUrls.sort((a, b) => {
+        const aClicks = clickCountsMap.get(a.id) ?? 0;
+        const bClicks = clickCountsMap.get(b.id) ?? 0;
+        return sortOrderParam === "asc" ? aClicks - bClicks : bClicks - aClicks;
+      });
+      
+      // Apply pagination
+      userUrls = sortedUrls.slice(offset, offset + limit);
+    } else {
+      // For date sorting, use database ORDER BY
+      const orderFn = sortOrderParam === "asc" ? asc : desc;
+      userUrls = await db
+        .select()
+        .from(urls)
+        .where(whereConditions)
+        .orderBy(orderFn(urls.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";

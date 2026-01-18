@@ -1,3 +1,7 @@
+export type StatusFilter = "all" | "active" | "inactive";
+export type SortBy = "date" | "clicks";
+export type SortOrder = "asc" | "desc";
+
 export interface Session {
   user?: {
     id: string;

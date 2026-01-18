@@ -21,6 +21,12 @@ export default function DashboardPage() {
     searchQuery,
     setSearchQuery,
     isSearching,
+    statusFilter,
+    setStatusFilter,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
     pagination,
     lastUpdated,
     stats,
@@ -65,6 +71,12 @@ export default function DashboardPage() {
           searchQuery={searchQuery} 
           onSearchChange={setSearchQuery}
           isSearching={isSearching || fetchingUrls}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
         />
 
         <DashboardUrlList 
