@@ -6,6 +6,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { DashboardUrlList } from "@/components/dashboard/DashboardUrlList";
 import { Pagination } from "@/components/dashboard/Pagination";
+import type { Url } from "@/types/dashboard";
 
 export default function DashboardPage() {
   const {
@@ -32,7 +33,13 @@ export default function DashboardPage() {
 
   // Calculate stats
   const totalClicks = urls.reduce((sum, url) => sum + (url.clickCount ?? 0), 0);
-  const topPerforming = urls.length > 0 ? urls[0] : null;
+  
+  // Find top performing URL (highest click count)
+  const topPerforming = urls.reduce((top, url) => {
+    const urlClicks = url.clickCount ?? 0;
+    const topClicks = top?.clickCount ?? 0;
+    return urlClicks > topClicks ? url : top;
+  }, null as Url | null);
 
   return (
     <div className="min-h-screen bg-background">

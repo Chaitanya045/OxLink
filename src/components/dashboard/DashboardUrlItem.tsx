@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Copy, BarChart3, QrCode, Edit, Trash2, Link2 } from "lucide-react";
@@ -10,8 +13,13 @@ interface DashboardUrlItemProps {
 }
 
 export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
+  const router = useRouter();
   const isActive = isUrlActive(url.expiryDate);
   const analyticsUrl = `/analytics/${url.customAlias || url.shortCode}`;
+
+  const handleCardClick = () => {
+    router.push(analyticsUrl);
+  };
 
   const handleActionClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -19,8 +27,10 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
   };
 
   return (
-    <Link href={analyticsUrl} className="block">
-      <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+    <Card 
+      className="hover:bg-accent/50 transition-colors cursor-pointer"
+      onClick={handleCardClick}
+    >
         <CardContent className="p-6">
           <div className="flex items-center gap-4">
             {/* Icon */}
@@ -99,6 +109,5 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
           </div>
         </CardContent>
       </Card>
-    </Link>
   );
 }

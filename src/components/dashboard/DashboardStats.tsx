@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkIcon, BarChart3, Star, TrendingUp } from "lucide-react";
 import type { Url } from "@/types/dashboard";
@@ -13,6 +16,31 @@ export function DashboardStats({
   totalClicks,
   topPerforming,
 }: DashboardStatsProps) {
+  const router = useRouter();
+
+  const handleTopPerformingClick = () => {
+    if (topPerforming) {
+      const shortCode = topPerforming.customAlias || topPerforming.shortCode;
+      router.push(`/analytics/${shortCode}`);
+    }
+  };
+
+  const getShortUrlDisplay = (url: Url) => {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const shortCode = url.customAlias || url.shortCode;
+    try {
+      const urlObj = new URL(baseUrl);
+      return `${urlObj.host}/${shortCode}`;
+    } catch {
+      // Fallback: extract domain from baseUrl string
+      const match = baseUrl.match(/https?:\/\/([^\/]+)/);
+      if (match) {
+        return `${match[1]}/${shortCode}`;
+      }
+      return shortCode;
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
       {/* Total Links */}
@@ -52,7 +80,10 @@ export function DashboardStats({
       </Card>
 
       {/* Top Performing */}
-      <Card>
+      <Card
+        className={topPerforming ? "cursor-pointer hover:bg-accent/50 transition-colors" : ""}
+        onClick={topPerforming ? handleTopPerformingClick : undefined}
+      >
         <CardContent className="pt-6">
           <div className="flex items-start justify-between mb-2">
             <div className="text-sm text-muted-foreground">
@@ -62,13 +93,13 @@ export function DashboardStats({
           </div>
           <div className="text-xl font-bold truncate">
             {topPerforming
-              ? `ox.link/${
-                  topPerforming.customAlias || topPerforming.shortCode
-                }`
+              ? getShortUrlDisplay(topPerforming)
               : "N/A"}
           </div>
           <div className="text-sm text-muted-foreground">
-            {topPerforming ? "45 clicks in last 24h" : "No data"}
+            {topPerforming
+              ? `${topPerforming.clickCount ?? 0} ${(topPerforming.clickCount ?? 0) === 1 ? "click" : "clicks"}`
+              : "No data"}
           </div>
         </CardContent>
       </Card>

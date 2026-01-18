@@ -31,11 +31,6 @@ export function DashboardHeader() {
         <p className="text-sm text-muted-foreground hidden sm:block">
           Last updated: Just now
         </p>
-        <ThemeToggle />
-        <Button variant="outline" size="sm" onClick={handleSignOut}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign Out
-        </Button>
       </div>
     </div>
   );
