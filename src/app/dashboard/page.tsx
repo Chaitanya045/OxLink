@@ -17,6 +17,7 @@ export default function DashboardPage() {
     searchQuery,
     setSearchQuery,
     pagination,
+    lastUpdated,
   } = useDashboard();
 
   if (loading) {
@@ -44,7 +45,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <DashboardHeader />
+        <DashboardHeader lastUpdated={lastUpdated} />
 
         <DashboardStats
           totalCount={pagination.totalCount}

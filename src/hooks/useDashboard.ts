@@ -14,6 +14,7 @@ interface UseDashboardReturn {
   checkSession: () => Promise<void>;
   fetchUrls: (page: number) => Promise<void>;
   clearCacheAndRefresh: () => void;
+  lastUpdated: Date | null;
 }
 
 const URLS_PER_PAGE = 10;
@@ -25,6 +26,7 @@ export function useDashboard(): UseDashboardReturn {
   const [urls, setUrls] = useState<Url[]>([]);
   const [fetchingUrls, setFetchingUrls] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const pagination = usePagination({ itemsPerPage: URLS_PER_PAGE });
   const { setPaginationData, currentPage } = pagination;
@@ -34,8 +36,8 @@ export function useDashboard(): UseDashboardReturn {
   >(new Map());
 
   const fetchUrls = useCallback(
-    async (page: number) => {
-      if (pageCache.current.has(page)) {
+    async (page: number, silent = false) => {
+      if (pageCache.current.has(page) && !silent) {
         const cached = pageCache.current.get(page)!;
         setUrls(cached.data);
         setPaginationData({
@@ -47,7 +49,10 @@ export function useDashboard(): UseDashboardReturn {
         return;
       }
 
-      setFetchingUrls(true);
+      // Skip loading state for silent/background refreshes
+      if (!silent) {
+        setFetchingUrls(true);
+      }
       try {
         const response = await fetch(
           `/api/urls?page=${page}&limit=${URLS_PER_PAGE}`,
@@ -64,11 +69,14 @@ export function useDashboard(): UseDashboardReturn {
           });
           setUrls(data.data);
           setPaginationData(data.pagination);
+          setLastUpdated(new Date());
         }
       } catch (error) {
         console.error("Failed to fetch URLs", error);
       } finally {
-        setFetchingUrls(false);
+        if (!silent) {
+          setFetchingUrls(false);
+        }
       }
     },
     [setPaginationData]
@@ -110,6 +118,18 @@ export function useDashboard(): UseDashboardReturn {
     }
   }, [session, currentPage, fetchUrls]);
 
+  // Polling interval (30 seconds) - silent refresh
+  useEffect(() => {
+    if (!session) return;
+
+    const interval = setInterval(() => {
+      pageCache.current.clear();
+      fetchUrls(currentPage, true); // silent = true
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [session, currentPage, fetchUrls]);
+
   return {
     session,
     loading,
@@ -121,5 +141,6 @@ export function useDashboard(): UseDashboardReturn {
     checkSession,
     fetchUrls,
     clearCacheAndRefresh,
+    lastUpdated,
   };
 }
