@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LinkIcon } from "lucide-react";
 
 export function AuthLeftPanel() {
@@ -6,11 +7,12 @@ export function AuthLeftPanel() {
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center p-12 text-foreground w-full">
         {/* Logo - Top Left */}
-        <div className="absolute top-8 left-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-            <LinkIcon className="h-7 w-7" />
+        <Link href="/" className="absolute top-8 left-8 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <LinkIcon className="h-5 w-5 text-primary-foreground" />
           </div>
-        </div>
+          <span className="text-xl font-bold">OxLink</span>
+        </Link>
 
         {/* Main Content - Centered */}
         <div className="text-center space-y-6 max-w-md">
