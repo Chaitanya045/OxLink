@@ -3,6 +3,11 @@ import { useRouter } from "next/navigation";
 import type { Url, Session } from "@/types/dashboard";
 import { usePagination } from "./usePagination";
 
+interface DashboardStats {
+  totalClicks: number;
+  topPerforming: Url | null;
+}
+
 interface UseDashboardReturn {
   session: Session | null;
   loading: boolean;
@@ -15,6 +20,7 @@ interface UseDashboardReturn {
   fetchUrls: (page: number) => Promise<void>;
   clearCacheAndRefresh: () => void;
   lastUpdated: Date | null;
+  stats: DashboardStats;
 }
 
 const URLS_PER_PAGE = 10;
@@ -27,6 +33,10 @@ export function useDashboard(): UseDashboardReturn {
   const [fetchingUrls, setFetchingUrls] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalClicks: 0,
+    topPerforming: null,
+  });
 
   const pagination = usePagination({ itemsPerPage: URLS_PER_PAGE });
   const { setPaginationData, currentPage } = pagination;
@@ -103,6 +113,23 @@ export function useDashboard(): UseDashboardReturn {
     }
   }, [router]);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/urls/stats", {
+        credentials: "include",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setStats({
+          totalClicks: data.totalClicks || 0,
+          topPerforming: data.topPerforming || null,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats", error);
+    }
+  }, []);
+
   const clearCacheAndRefresh = useCallback(() => {
     pageCache.current.clear();
     fetchUrls(currentPage);
@@ -115,8 +142,9 @@ export function useDashboard(): UseDashboardReturn {
   useEffect(() => {
     if (session) {
       fetchUrls(currentPage);
+      fetchStats();
     }
-  }, [session, currentPage, fetchUrls]);
+  }, [session, currentPage, fetchUrls, fetchStats]);
 
   // Polling interval (30 seconds) - silent refresh
   useEffect(() => {
@@ -125,10 +153,11 @@ export function useDashboard(): UseDashboardReturn {
     const interval = setInterval(() => {
       pageCache.current.clear();
       fetchUrls(currentPage, true); // silent = true
+      fetchStats(); // Also refresh stats silently
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [session, currentPage, fetchUrls]);
+  }, [session, currentPage, fetchUrls, fetchStats]);
 
   return {
     session,
@@ -142,5 +171,6 @@ export function useDashboard(): UseDashboardReturn {
     fetchUrls,
     clearCacheAndRefresh,
     lastUpdated,
+    stats,
   };
 }

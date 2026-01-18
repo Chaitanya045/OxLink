@@ -6,7 +6,6 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { DashboardUrlList } from "@/components/dashboard/DashboardUrlList";
 import { Pagination } from "@/components/dashboard/Pagination";
-import type { Url } from "@/types/dashboard";
 
 export default function DashboardPage() {
   const {
@@ -18,6 +17,7 @@ export default function DashboardPage() {
     setSearchQuery,
     pagination,
     lastUpdated,
+    stats,
   } = useDashboard();
 
   if (loading) {
@@ -32,16 +32,6 @@ export default function DashboardPage() {
     return null;
   }
 
-  // Calculate stats
-  const totalClicks = urls.reduce((sum, url) => sum + (url.clickCount ?? 0), 0);
-  
-  // Find top performing URL (highest click count)
-  const topPerforming = urls.reduce((top, url) => {
-    const urlClicks = url.clickCount ?? 0;
-    const topClicks = top?.clickCount ?? 0;
-    return urlClicks > topClicks ? url : top;
-  }, null as Url | null);
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -49,8 +39,8 @@ export default function DashboardPage() {
 
         <DashboardStats
           totalCount={pagination.totalCount}
-          totalClicks={totalClicks}
-          topPerforming={topPerforming}
+          totalClicks={stats.totalClicks}
+          topPerforming={stats.topPerforming}
         />
 
         <DashboardSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />

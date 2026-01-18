@@ -53,6 +53,8 @@ export function DashboardUrlItem({ url }: DashboardUrlItemProps) {
                   <Link
                     href={`/${url.customAlias || url.shortCode}`}
                     onClick={(e) => e.stopPropagation()}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-primary font-medium hover:underline"
                   >
                     {(() => {
