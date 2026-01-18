@@ -9,6 +9,7 @@ import { Copy, BarChart3, QrCode, Edit, Trash2, Link2 } from "lucide-react";
 import type { Url } from "@/types/dashboard";
 import { isUrlActive, getTimeSince, copyToClipboard } from "@/lib/analytics-utils";
 import { EditUrlModal } from "./EditUrlModal";
+import { QrCodeModal } from "./QrCodeModal";
 
 interface DashboardUrlItemProps {
   url: Url;
@@ -18,6 +19,7 @@ interface DashboardUrlItemProps {
 export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
   const router = useRouter();
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
   const isActive = isUrlActive(url.expiryDate);
   const analyticsUrl = `/analytics/${url.customAlias || url.shortCode}`;
 
@@ -33,6 +35,11 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
   const handleEditClick = (e: React.MouseEvent) => {
     handleActionClick(e);
     setEditModalOpen(true);
+  };
+
+  const handleQrClick = (e: React.MouseEvent) => {
+    handleActionClick(e);
+    setQrModalOpen(true);
   };
 
   const handleEditSuccess = () => {
@@ -115,7 +122,7 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 <span className="font-semibold text-sm">{url.clickCount ?? 0}</span>
               </div>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleQrClick}>
                 <QrCode className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={handleEditClick}>
@@ -133,6 +140,11 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         onSuccess={handleEditSuccess}
+      />
+      <QrCodeModal
+        shortUrl={url.shortUrl}
+        open={qrModalOpen}
+        onOpenChange={setQrModalOpen}
       />
     </>
   );

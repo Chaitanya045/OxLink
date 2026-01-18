@@ -40,23 +40,23 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Get all short codes for this user
-    const shortCodes = userUrls.map((url) => url.shortCode);
+    // Get all URL IDs for this user
+    const urlIds = userUrls.map((url) => url.id);
 
-    // Get click counts grouped by shortCode
+    // Get click counts grouped by urlId (not shortCode, to track per version)
     const clickCounts = await db
       .select({
-        shortCode: urlClicks.shortCode,
+        urlId: urlClicks.urlId,
         count: sql<number>`COUNT(*)`.as("count"),
       })
       .from(urlClicks)
-      .where(inArray(urlClicks.shortCode, shortCodes))
-      .groupBy(urlClicks.shortCode);
+      .where(inArray(urlClicks.urlId, urlIds))
+      .groupBy(urlClicks.urlId);
 
-    // Create a map of shortCode -> clickCount
-    const clickCountsMap = new Map<string, number>();
+    // Create a map of urlId -> clickCount
+    const clickCountsMap = new Map<number, number>();
     clickCounts.forEach((row) => {
-      clickCountsMap.set(row.shortCode, Number(row.count));
+      clickCountsMap.set(row.urlId, Number(row.count));
     });
 
     // Calculate total clicks across all URLs
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
     let maxClicks = 0;
     for (const url of userUrls) {
-      const clicks = clickCountsMap.get(url.shortCode) ?? 0;
+      const clicks = clickCountsMap.get(url.id) ?? 0;
       if (clicks > maxClicks) {
         maxClicks = clicks;
         const baseUrl =

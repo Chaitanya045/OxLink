@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LinkIcon, Zap, ChevronDown } from "lucide-react";
 import { useUrlShortener } from "@/hooks/useUrlShortener";
 import type { Session } from "@/types/dashboard";
+import { toast } from "sonner";
 
 interface UrlShortenerFormProps {
   session: Session | null;
@@ -34,9 +35,12 @@ export function UrlShortenerForm({
     if (session && pendingUrlData && !creating && !shortUrl) {
       const submitPendingUrl = async () => {
         try {
-          await createShortUrl({
+          const result = await createShortUrl({
             originalUrl: pendingUrlData.originalUrl,
             customAlias: pendingUrlData.customAlias,
+          });
+          toast.success("URL created successfully!", {
+            description: result.shortUrl,
           });
           // Clear form state
           setOriginalUrl("");
@@ -73,9 +77,13 @@ export function UrlShortenerForm({
     }
 
     try {
-      await createShortUrl({
+      const result = await createShortUrl({
         originalUrl,
         customAlias: customAlias || undefined,
+      });
+
+      toast.success("URL created successfully!", {
+        description: result.shortUrl,
       });
 
       // Clear form on success

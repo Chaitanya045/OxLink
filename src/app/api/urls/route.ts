@@ -6,7 +6,7 @@ import {
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq, desc, sql, inArray, and } from "drizzle-orm";
+import { eq, desc, sql, inArray, and, or, ilike } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +20,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get pagination parameters from query string
+    // Get pagination and search parameters from query string
     const searchParams = req.nextUrl.searchParams;
     const pageParam = searchParams.get("page");
     const limitParam = searchParams.get("limit");
+    const searchParam = searchParams.get("search")?.trim() || "";
     
     // Validate and parse page parameter (default to 1, minimum 1)
     const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
@@ -33,49 +34,59 @@ export async function GET(req: NextRequest) {
     
     const offset = (page - 1) * limit;
 
-    // Get total count for pagination (only latest versions)
+    // Build base where conditions
+    const baseConditions = and(
+      eq(urls.createdBy, session.user.id),
+      eq(urls.isLatest, true)
+    );
+
+    // Add search conditions if search term is provided
+    let whereConditions = baseConditions;
+    if (searchParam) {
+      const searchPattern = `%${searchParam}%`;
+      whereConditions = and(
+        baseConditions,
+        or(
+          ilike(urls.shortCode, searchPattern),
+          ilike(urls.customAlias, searchPattern),
+          ilike(urls.originalUrl, searchPattern)
+        )
+      );
+    }
+
+    // Get total count for pagination (with search filter if applicable)
     const totalUrls = await db
       .select()
       .from(urls)
-      .where(
-        and(
-          eq(urls.createdBy, session.user.id),
-          eq(urls.isLatest, true)
-        )
-      );
+      .where(whereConditions);
 
     const totalCount = totalUrls.length;
 
-    // Get paginated URLs (only latest versions)
+    // Get paginated URLs (with search filter if applicable)
     const userUrls = await db
       .select()
       .from(urls)
-      .where(
-        and(
-          eq(urls.createdBy, session.user.id),
-          eq(urls.isLatest, true)
-        )
-      )
+      .where(whereConditions)
       .orderBy(desc(urls.createdAt))
       .limit(limit)
       .offset(offset);
 
-    // Get click counts for these URLs
-    const shortCodes = userUrls.map((url) => url.shortCode);
-    const clickCountsMap = new Map<string, number>();
+    // Get click counts for these URLs (by urlId, not shortCode)
+    const urlIds = userUrls.map((url) => url.id);
+    const clickCountsMap = new Map<number, number>();
     
-    if (shortCodes.length > 0) {
+    if (urlIds.length > 0) {
       const clickCounts = await db
         .select({
-          shortCode: urlClicks.shortCode,
+          urlId: urlClicks.urlId,
           count: sql<number>`COUNT(*)`.as('count'),
         })
         .from(urlClicks)
-        .where(inArray(urlClicks.shortCode, shortCodes))
-        .groupBy(urlClicks.shortCode);
+        .where(inArray(urlClicks.urlId, urlIds))
+        .groupBy(urlClicks.urlId);
       
       clickCounts.forEach((row) => {
-        clickCountsMap.set(row.shortCode, Number(row.count));
+        clickCountsMap.set(row.urlId, Number(row.count));
       });
     }
 
@@ -89,7 +100,7 @@ export async function GET(req: NextRequest) {
       createdAt: url.createdAt,
       expiryDate: url.expiryDate,
       shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
-      clickCount: clickCountsMap.get(url.shortCode) ?? 0,
+      clickCount: clickCountsMap.get(url.id) ?? 0,
     }));
 
     return NextResponse.json({

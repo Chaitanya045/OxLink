@@ -1,13 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useDashboard } from "@/hooks/useDashboard";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
 import { DashboardUrlList } from "@/components/dashboard/DashboardUrlList";
 import { Pagination } from "@/components/dashboard/Pagination";
+import { CreateUrlModal } from "@/components/dashboard/CreateUrlModal";
 
 export default function DashboardPage() {
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [prefilledAlias, setPrefilledAlias] = useState("");
+
   const {
     session,
     loading,
@@ -15,11 +20,23 @@ export default function DashboardPage() {
     fetchingUrls,
     searchQuery,
     setSearchQuery,
+    isSearching,
     pagination,
     lastUpdated,
     stats,
     clearCacheAndRefresh,
   } = useDashboard();
+
+  const handleCreateWithAlias = (alias: string) => {
+    setPrefilledAlias(alias);
+    setCreateModalOpen(true);
+  };
+
+  const handleCreateSuccess = () => {
+    clearCacheAndRefresh();
+    setCreateModalOpen(false);
+    setPrefilledAlias("");
+  };
 
   if (loading) {
     return (
@@ -44,11 +61,17 @@ export default function DashboardPage() {
           topPerforming={stats.topPerforming}
         />
 
-        <DashboardSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <DashboardSearch 
+          searchQuery={searchQuery} 
+          onSearchChange={setSearchQuery}
+          isSearching={isSearching || fetchingUrls}
+        />
 
         <DashboardUrlList 
           urls={urls} 
           fetchingUrls={fetchingUrls}
+          searchQuery={searchQuery}
+          onCreateWithAlias={handleCreateWithAlias}
           onUrlUpdated={clearCacheAndRefresh}
         />
 
@@ -59,6 +82,13 @@ export default function DashboardPage() {
           onPageChange={pagination.setCurrentPage}
           onNextPage={pagination.goToNextPage}
           onPreviousPage={pagination.goToPreviousPage}
+        />
+
+        <CreateUrlModal
+          prefilledAlias={prefilledAlias}
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          onSuccess={handleCreateSuccess}
         />
       </div>
     </div>

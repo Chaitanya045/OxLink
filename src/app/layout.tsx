@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { NavbarWrapper } from "@/components/home/NavbarWrapper";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "OxLink - URL Shortener",
@@ -24,6 +25,7 @@ export default function RootLayout({
         >
           <NavbarWrapper />
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

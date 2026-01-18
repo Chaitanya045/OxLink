@@ -7,10 +7,18 @@ import type { Url } from "@/types/dashboard";
 interface DashboardUrlListProps {
   urls: Url[];
   fetchingUrls: boolean;
+  searchQuery?: string;
+  onCreateWithAlias?: (alias: string) => void;
   onUrlUpdated?: () => void;
 }
 
-export function DashboardUrlList({ urls, fetchingUrls, onUrlUpdated }: DashboardUrlListProps) {
+export function DashboardUrlList({
+  urls,
+  fetchingUrls,
+  searchQuery,
+  onCreateWithAlias,
+  onUrlUpdated,
+}: DashboardUrlListProps) {
   if (fetchingUrls) {
     return (
       <div className="text-center py-12">
@@ -20,6 +28,24 @@ export function DashboardUrlList({ urls, fetchingUrls, onUrlUpdated }: Dashboard
   }
 
   if (urls.length === 0) {
+    // Show "No results found" if searching, otherwise show "Create Your First URL"
+    if (searchQuery) {
+      return (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              No results found for "{searchQuery}".
+            </p>
+            {onCreateWithAlias && (
+              <Button onClick={() => onCreateWithAlias(searchQuery)}>
+                Create URL as {searchQuery}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardContent className="text-center py-12">

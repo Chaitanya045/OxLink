@@ -53,11 +53,11 @@ export async function GET(
       );
     }
 
-    // Fetch all analytics data for this short code
+    // Fetch all analytics data for this URL version (by urlId, not shortCode)
     const urlClicksData = await db
       .select()
       .from(urlClicks)
-      .where(eq(urlClicks.shortCode, short_code));
+      .where(eq(urlClicks.urlId, urlRecord.id));
 
     return NextResponse.json({ urlClicksData });
   } catch (error) {
