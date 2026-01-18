@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type {
   UrlClick,
   AnalyticsData,
@@ -9,10 +9,14 @@ import type {
   TimeSeriesData,
   TopReferrer,
   TopLocation,
+  TimePeriod,
+  DateRange,
 } from "@/types/analytics";
 
 interface UseAnalyticsOptions {
   shortCode: string;
+  timePeriod?: TimePeriod;
+  customDateRange?: DateRange | null;
 }
 
 interface UseAnalyticsReturn {
@@ -30,38 +34,79 @@ const CHART_COLORS = [
   "hsl(var(--chart-3))",
 ];
 
-export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsReturn {
+export function useAnalytics({ shortCode, timePeriod = "7d", customDateRange = null }: UseAnalyticsOptions): UseAnalyticsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [urlInfo, setUrlInfo] = useState<UrlInfo | null>(null);
+  // Store raw clicks to reprocess without refetching
+  const rawClicksRef = useRef<UrlClick[]>([]);
+  const initialFetchDoneRef = useRef(false);
 
-  const processClicksData = useCallback((clicks: UrlClick[]): AnalyticsData => {
-    const total = clicks.length;
+  const processClicksData = useCallback((clicks: UrlClick[], period: TimePeriod, dateRange: DateRange | null): AnalyticsData => {
     const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+    let periodDays: number;
 
-    // Calculate period-over-period comparison
-    const last7Days = clicks.filter((c) => {
+    // Determine the date range based on period
+    if (period === "custom" && dateRange) {
+      startDate = new Date(dateRange.start);
+      endDate = new Date(dateRange.end);
+      // Set end date to end of day
+      endDate.setHours(23, 59, 59, 999);
+      // Set start date to start of day
+      startDate.setHours(0, 0, 0, 0);
+      periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    } else if (period === "7d") {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      periodDays = 7;
+    } else if (period === "30d") {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0);
+      periodDays = 30;
+    } else {
+      // All time - use earliest click or a very old date
+      const earliestClick = clicks.length > 0 
+        ? new Date(Math.min(...clicks.map(c => new Date(c.clickedAt).getTime())))
+        : new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Default to 1 year ago
+      startDate = new Date(earliestClick);
+      startDate.setHours(0, 0, 0, 0);
+      periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    // Filter clicks within the selected period
+    const periodClicks = clicks.filter((c) => {
       const clickDate = new Date(c.clickedAt);
-      const daysAgo = (now.getTime() - clickDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysAgo <= 7;
+      return clickDate >= startDate && clickDate <= endDate;
     });
 
-    const previous7Days = clicks.filter((c) => {
-      const clickDate = new Date(c.clickedAt);
-      const daysAgo = (now.getTime() - clickDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysAgo > 7 && daysAgo <= 14;
-    });
+    // Calculate previous period for comparison (only for 7d and 30d)
+    let previousPeriodClicks = 0;
+    if (period === "7d" || period === "30d") {
+      const previousStartDate = new Date(startDate);
+      previousStartDate.setDate(previousStartDate.getDate() - periodDays);
+      const previousEndDate = new Date(startDate);
+      previousEndDate.setMilliseconds(previousEndDate.getMilliseconds() - 1);
 
-    const totalClicks = last7Days.length;
-    const previousPeriodClicks = previous7Days.length;
+      previousPeriodClicks = clicks.filter((c) => {
+        const clickDate = new Date(c.clickedAt);
+        return clickDate >= previousStartDate && clickDate <= previousEndDate;
+      }).length;
+    }
 
-    // Unique visitors (from all clicks)
-    const uniqueIps = new Set(clicks.map((c) => c.ipAddress).filter(Boolean)).size;
+    const totalClicks = periodClicks.length;
+    const total = periodClicks.length;
 
-    // Device breakdown (from all clicks for comprehensive view)
+    // Unique visitors (from period clicks)
+    const uniqueIps = new Set(periodClicks.map((c) => c.ipAddress).filter(Boolean)).size;
+
+    // Device breakdown (from period clicks)
     const deviceBreakdown: Record<string, number> = {};
-    clicks.forEach((click) => {
+    periodClicks.forEach((click) => {
       const device = click.deviceType || "Unknown";
       deviceBreakdown[device] = (deviceBreakdown[device] || 0) + 1;
     });
@@ -70,21 +115,20 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
       ([name, value]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1),
         value,
-        percentage: Math.round((value / total) * 100),
+        percentage: total > 0 ? Math.round((value / total) * 100) : 0,
       })
     );
 
-    // Location breakdown (from last 7 days to match totalClicks)
+    // Location breakdown (from period clicks)
     const locationBreakdown: Record<string, number> = {};
-    last7Days.forEach((click) => {
+    periodClicks.forEach((click) => {
       const country = click.country || "Unknown";
       locationBreakdown[country] = (locationBreakdown[country] || 0) + 1;
     });
 
     const locationData: LocationData[] = Object.entries(locationBreakdown)
       .map(([country, count]) => ({ country, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .sort((a, b) => b.count - a.count);
 
     const topLocation: TopLocation = locationData.length > 0 && totalClicks > 0
       ? {
@@ -93,9 +137,9 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
         }
       : { name: "", percentage: 0 };
 
-    // Referrer breakdown (from last 7 days to match totalClicks)
+    // Referrer breakdown (from period clicks)
     const referrerBreakdown: Record<string, number> = {};
-    last7Days.forEach((click) => {
+    periodClicks.forEach((click) => {
       let source = "Direct / Email";
       if (click.referrer) {
         try {
@@ -117,8 +161,7 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
 
     const referrerData: ReferrerData[] = Object.entries(referrerBreakdown)
       .map(([source, count]) => ({ source, count, change: 0 }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .sort((a, b) => b.count - a.count);
 
     const topReferrer: TopReferrer = referrerData.length > 0 && totalClicks > 0
       ? {
@@ -127,41 +170,70 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
         }
       : { name: "", percentage: 0 };
 
-    // Time series data (last 7 days)
-    const last7DaysData: Record<string, number> = {};
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      last7DaysData[dateStr] = 0;
-    }
-
-    clicks.forEach((click) => {
-      const clickDate = new Date(click.clickedAt);
-      const daysAgo = (now.getTime() - clickDate.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysAgo <= 7) {
+    // Time series data - generate based on period
+    const timeSeriesData: TimeSeriesData[] = [];
+    
+    if (period === "all" || period === "custom") {
+      // For all time or custom, group by day
+      const dailyData: Record<string, number> = {};
+      const currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        dailyData[dateStr] = 0;
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      periodClicks.forEach((click) => {
+        const clickDate = new Date(click.clickedAt);
         const dateStr = clickDate.toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
         });
-        if (last7DaysData[dateStr] !== undefined) {
-          last7DaysData[dateStr]++;
+        if (dailyData[dateStr] !== undefined) {
+          dailyData[dateStr]++;
         }
-      }
-    });
-
-    const timeSeriesData: TimeSeriesData[] = Object.entries(last7DaysData).map(
-      ([date, clicks]) => ({
+      });
+      
+      timeSeriesData.push(...Object.entries(dailyData).map(([date, clicks]) => ({
         date,
         clicks,
-      })
-    );
+      })));
+    } else {
+      // For 7d and 30d, show daily data
+      const dailyData: Record<string, number> = {};
+      for (let i = periodDays - 1; i >= 0; i--) {
+        const date = new Date(endDate);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        dailyData[dateStr] = 0;
+      }
+      
+      periodClicks.forEach((click) => {
+        const clickDate = new Date(click.clickedAt);
+        const dateStr = clickDate.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        if (dailyData[dateStr] !== undefined) {
+          dailyData[dateStr]++;
+        }
+      });
+      
+      timeSeriesData.push(...Object.entries(dailyData).map(([date, clicks]) => ({
+        date,
+        clicks,
+      })));
+    }
 
     return {
-      clicks,
+      clicks: periodClicks,
       totalClicks,
       uniqueVisitors: uniqueIps,
       previousPeriodClicks,
@@ -176,7 +248,10 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show loading on initial fetch
+      if (!initialFetchDoneRef.current) {
+        setLoading(true);
+      }
       setError("");
 
       const response = await fetch(`/api/urls/${shortCode}/analytics`, {
@@ -190,7 +265,8 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
 
       const data = await response.json();
       const clicks: UrlClick[] = data.urlClicksData;
-      const processedData = processClicksData(clicks);
+      rawClicksRef.current = clicks;
+      const processedData = processClicksData(clicks, timePeriod, customDateRange);
       setAnalyticsData(processedData);
 
       // Get URL info
@@ -204,21 +280,38 @@ export function useAnalytics({ shortCode }: UseAnalyticsOptions): UseAnalyticsRe
         );
         if (url) {
           setUrlInfo({
+            id: url.id,
+            shortCode: url.shortCode,
             originalUrl: url.originalUrl,
             shortUrl: url.shortUrl,
+            customAlias: url.customAlias || null,
+            expiryDate: url.expiryDate || null,
+            createdAt: url.createdAt,
+            version: url.version,
           });
         }
       }
+      initialFetchDoneRef.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
-  }, [shortCode, processClicksData]);
+  }, [shortCode, processClicksData, timePeriod, customDateRange]);
 
+  // Initial fetch only when shortCode changes
   useEffect(() => {
+    initialFetchDoneRef.current = false;
     fetchAnalytics();
-  }, [fetchAnalytics]);
+  }, [shortCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reprocess data when time period changes (without refetching)
+  useEffect(() => {
+    if (initialFetchDoneRef.current && rawClicksRef.current.length > 0) {
+      const processedData = processClicksData(rawClicksRef.current, timePeriod, customDateRange);
+      setAnalyticsData(processedData);
+    }
+  }, [timePeriod, customDateRange, processClicksData]);
 
   const clicksChange =
     analyticsData && analyticsData.previousPeriodClicks > 0

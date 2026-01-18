@@ -4,6 +4,7 @@ import type { Session } from "@/types/dashboard";
 interface PendingUrlData {
   originalUrl: string;
   customAlias?: string;
+  expiryDate?: string;
 }
 
 interface UsePendingUrlReturn {

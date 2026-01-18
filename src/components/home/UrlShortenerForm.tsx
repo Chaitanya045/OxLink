@@ -9,11 +9,12 @@ import { LinkIcon, Zap, ChevronDown } from "lucide-react";
 import { useUrlShortener } from "@/hooks/useUrlShortener";
 import type { Session } from "@/types/dashboard";
 import { toast } from "sonner";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 interface UrlShortenerFormProps {
   session: Session | null;
   onUrlCreated?: () => void;
-  pendingUrlData?: { originalUrl: string; customAlias?: string } | null;
+  pendingUrlData?: { originalUrl: string; customAlias?: string; expiryDate?: string } | null;
   onPendingDataHandled?: () => void;
 }
 
@@ -24,8 +25,10 @@ export function UrlShortenerForm({
   onPendingDataHandled,
 }: UrlShortenerFormProps) {
   const router = useRouter();
+  const { copy } = useCopyToClipboard();
   const [originalUrl, setOriginalUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const { shortUrl, error, creating, createShortUrl, resetState } =
     useUrlShortener();
@@ -35,9 +38,18 @@ export function UrlShortenerForm({
     if (session && pendingUrlData && !creating && !shortUrl) {
       const submitPendingUrl = async () => {
         try {
+          // Convert expiry date to end of day timestamp if provided
+          let expiryDateValue: string | undefined = undefined;
+          if (pendingUrlData.expiryDate) {
+            const date = new Date(pendingUrlData.expiryDate);
+            date.setHours(23, 59, 59, 999); // Set to end of day
+            expiryDateValue = date.toISOString();
+          }
+
           const result = await createShortUrl({
             originalUrl: pendingUrlData.originalUrl,
             customAlias: pendingUrlData.customAlias,
+            expiryDate: expiryDateValue,
           });
           toast.success("URL created successfully!", {
             description: result.shortUrl,
@@ -45,6 +57,7 @@ export function UrlShortenerForm({
           // Clear form state
           setOriginalUrl("");
           setCustomAlias("");
+          setExpiryDate("");
           setShowAdvanced(false);
           // Notify parent that pending data was handled
           onPendingDataHandled?.();
@@ -70,6 +83,7 @@ export function UrlShortenerForm({
         JSON.stringify({
           originalUrl,
           customAlias: customAlias || undefined,
+          expiryDate: expiryDate || undefined,
         })
       );
       router.push("/auth/signin");
@@ -77,9 +91,18 @@ export function UrlShortenerForm({
     }
 
     try {
+      // Convert expiry date to end of day timestamp if provided
+      let expiryDateValue: string | undefined = undefined;
+      if (expiryDate) {
+        const date = new Date(expiryDate);
+        date.setHours(23, 59, 59, 999); // Set to end of day
+        expiryDateValue = date.toISOString();
+      }
+
       const result = await createShortUrl({
         originalUrl,
         customAlias: customAlias || undefined,
+        expiryDate: expiryDateValue,
       });
 
       toast.success("URL created successfully!", {
@@ -89,6 +112,7 @@ export function UrlShortenerForm({
       // Clear form on success
       setOriginalUrl("");
       setCustomAlias("");
+      setExpiryDate("");
       setShowAdvanced(false);
 
       // Notify parent
@@ -98,9 +122,6 @@ export function UrlShortenerForm({
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
 
   return (
     <div className="container mx-auto max-w-3xl px-4">
@@ -155,7 +176,7 @@ export function UrlShortenerForm({
                   showAdvanced ? "rotate-180" : ""
                 }`}
               />
-              Advanced Options (Custom Alias)
+              Advanced Options
             </button>
 
             {/* Advanced Options */}
@@ -175,6 +196,20 @@ export function UrlShortenerForm({
                     Leave empty for auto-generated code
                   </p>
                 </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Expiry Date (optional)
+                  </label>
+                  <Input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    disabled={creating}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave empty for no expiration
+                  </p>
+                </div>
               </div>
             )}
 
@@ -189,7 +224,7 @@ export function UrlShortenerForm({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => copyToClipboard(shortUrl)}
+                    onClick={() => copy(shortUrl)}
                   >
                     Copy
                   </Button>

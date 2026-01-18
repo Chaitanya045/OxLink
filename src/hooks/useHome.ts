@@ -7,6 +7,7 @@ import type { Session } from "@/types/dashboard";
 interface PendingUrlData {
   originalUrl: string;
   customAlias?: string;
+  expiryDate?: string;
 }
 
 interface UseHomeReturn {
@@ -18,6 +19,7 @@ interface UseHomeReturn {
   fetchRecentUrls: () => Promise<void>;
   handleUrlCreated: () => void;
   onPendingDataHandled: () => void;
+  onRecentUrlUpdated: () => void;
 }
 
 export function useHome(): UseHomeReturn {
@@ -44,6 +46,10 @@ export function useHome(): UseHomeReturn {
     }
   };
 
+  const onRecentUrlUpdated = () => {
+    fetchRecentUrls();
+  };
+
   return {
     session: session as Session | null,
     sessionLoading,
@@ -53,5 +59,6 @@ export function useHome(): UseHomeReturn {
     fetchRecentUrls,
     handleUrlCreated,
     onPendingDataHandled: clearPendingUrl,
+    onRecentUrlUpdated,
   };
 }

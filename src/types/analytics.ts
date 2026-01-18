@@ -1,3 +1,10 @@
+export type TimePeriod = "7d" | "30d" | "all" | "custom";
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
+
 export interface UrlClick {
   id: number;
   urlId: number;
@@ -61,6 +68,12 @@ export interface AnalyticsData {
 }
 
 export interface UrlInfo {
+  id: number;
+  shortCode: string;
   originalUrl: string;
   shortUrl: string;
+  customAlias: string | null;
+  expiryDate: string | null;
+  createdAt: string;
+  version?: number;
 }

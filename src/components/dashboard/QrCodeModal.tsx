@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { Download, Copy } from "lucide-react";
-import { copyToClipboard } from "@/lib/analytics-utils";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 interface QrCodeModalProps {
   shortUrl: string;
@@ -20,6 +20,7 @@ interface QrCodeModalProps {
 }
 
 export function QrCodeModal({ shortUrl, open, onOpenChange }: QrCodeModalProps) {
+  const { copy } = useCopyToClipboard();
   const qrRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
 
@@ -97,7 +98,7 @@ export function QrCodeModal({ shortUrl, open, onOpenChange }: QrCodeModalProps) 
   };
 
   const handleCopyLink = () => {
-    copyToClipboard(shortUrl);
+    copy(shortUrl);
   };
 
   return (

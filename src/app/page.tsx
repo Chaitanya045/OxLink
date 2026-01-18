@@ -15,6 +15,7 @@ export default function HomePage() {
     pendingUrlData,
     handleUrlCreated,
     onPendingDataHandled,
+    onRecentUrlUpdated,
   } = useHome();
 
   if (sessionLoading) {
@@ -43,7 +44,7 @@ export default function HomePage() {
         </div>
 
         {/* Recent Links */}
-        {session && <RecentLinks urls={recentUrls} loading={urlsLoading} />}
+        {session && <RecentLinks urls={recentUrls} loading={urlsLoading} onUrlUpdated={onRecentUrlUpdated} />}
       </main>
 
       {/* Footer */}

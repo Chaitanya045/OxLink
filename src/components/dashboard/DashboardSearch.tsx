@@ -107,7 +107,7 @@ export function DashboardSearch({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="h-10 min-w-[150px]">
-              <span className="mr-2">Sort: {getSortLabel(sortBy)}</span>
+              <span className="mr-2">Sort by: {getSortLabel(sortBy)}</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

@@ -9,7 +9,7 @@ export function useRecentUrls() {
   const fetchRecentUrls = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/urls?page=1&limit=3", {
+      const response = await fetch("/api/urls?page=1&limit=3&sortBy=date&sortOrder=desc", {
         credentials: "include",
       });
       if (response.ok) {

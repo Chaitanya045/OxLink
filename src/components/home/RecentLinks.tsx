@@ -4,14 +4,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
 import type { Url } from "@/types/dashboard";
-import { RecentLinkItem } from "./RecentLinkItem";
+import { DashboardUrlItem } from "@/components/dashboard/DashboardUrlItem";
 
 interface RecentLinksProps {
   urls: Url[];
   loading: boolean;
+  onUrlUpdated?: () => void;
 }
 
-export function RecentLinks({ urls, loading }: RecentLinksProps) {
+export function RecentLinks({ urls, loading, onUrlUpdated }: RecentLinksProps) {
   if (loading) {
     return (
       <section className="py-12 px-4">
@@ -47,7 +48,7 @@ export function RecentLinks({ urls, loading }: RecentLinksProps) {
         {/* Links List */}
         <div className="space-y-3">
           {urls.map((url) => (
-            <RecentLinkItem key={url.id} url={url} />
+            <DashboardUrlItem key={url.id} url={url} onUrlUpdated={onUrlUpdated} />
           ))}
         </div>
       </div>

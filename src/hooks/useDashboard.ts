@@ -166,7 +166,7 @@ export function useDashboard(): UseDashboardReturn {
 
   const clearCacheAndRefresh = useCallback(() => {
     pageCache.current.clear();
-    fetchUrls(currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder);
+    fetchUrls(currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder, true); // silent refresh
     fetchStats();
   }, [fetchUrls, fetchStats, currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
 

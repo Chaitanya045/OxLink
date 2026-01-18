@@ -127,18 +127,37 @@ export async function GET(req: NextRequest) {
       // Apply pagination
       userUrls = sortedUrls.slice(offset, offset + limit);
     } else {
-      // For date sorting, use database ORDER BY
-      const orderFn = sortOrderParam === "asc" ? asc : desc;
-      userUrls = await db
+      // For date sorting, we need to sort by updatedAt (if different from createdAt) or createdAt
+      // Fetch all filtered URLs to sort by effective date (updatedAt > createdAt, else createdAt)
+      const allFilteredUrls = await db
         .select()
         .from(urls)
-        .where(whereConditions)
-        .orderBy(orderFn(urls.createdAt))
-        .limit(limit)
-        .offset(offset);
+        .where(whereConditions);
+      
+      // Sort by effective date (updatedAt if it's different from createdAt, otherwise createdAt)
+      const sortedUrls = allFilteredUrls.sort((a, b) => {
+        // Get effective date for each URL: updatedAt if significantly different, else createdAt
+        const getEffectiveDate = (url: typeof urls.$inferSelect): Date => {
+          if (url.updatedAt && url.updatedAt !== url.createdAt) {
+            const diffMs = new Date(url.updatedAt).getTime() - new Date(url.createdAt).getTime();
+            // If updatedAt is significantly different (more than 1 second), use it
+            if (Math.abs(diffMs) >= 1000) {
+              return new Date(url.updatedAt);
+            }
+          }
+          return new Date(url.createdAt);
+        };
+        
+        const aDate = getEffectiveDate(a).getTime();
+        const bDate = getEffectiveDate(b).getTime();
+        return sortOrderParam === "asc" ? aDate - bDate : bDate - aDate;
+      });
+      
+      // Apply pagination
+      userUrls = sortedUrls.slice(offset, offset + limit);
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
     const data = userUrls.map((url) => ({
       id: url.id,
@@ -270,7 +289,7 @@ export async function POST(req: NextRequest) {
           originalUrl: newUrl.originalUrl,
           customAlias: newUrl.customAlias,
           shortUrl: `${
-            process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+            (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "")
           }/${newUrl.customAlias || newUrl.shortCode}`,
           expiryDate: newUrl.expiryDate,
           createdAt: newUrl.createdAt,

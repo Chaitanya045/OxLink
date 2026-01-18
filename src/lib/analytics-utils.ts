@@ -78,6 +78,12 @@ export function getTimeSinceWithLabel(
   return `Updated ${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }
 
-export function copyToClipboard(text: string): void {
-  navigator.clipboard.writeText(text);
+// Note: For components, prefer using useCopyToClipboard hook which includes toast notifications
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }

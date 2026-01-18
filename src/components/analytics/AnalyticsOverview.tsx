@@ -3,6 +3,7 @@ import {
   MousePointer,
   Users,
   Globe,
+  MapPin,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
@@ -87,7 +88,7 @@ export function AnalyticsOverview({
           <CardContent className="pt-6">
             <div className="flex items-start justify-between mb-2">
               <div className="text-sm text-muted-foreground">TOP LOCATION</div>
-              <Globe className="h-5 w-5 text-orange-500" />
+              <MapPin className="h-5 w-5 text-orange-500" />
             </div>
             <div className="text-3xl font-bold mb-1">{topLocation.name}</div>
             <div className="text-sm text-muted-foreground">

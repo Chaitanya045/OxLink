@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       if (clicks > maxClicks) {
         maxClicks = clicks;
         const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+          (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
         topPerforming = {
           id: url.id,
           shortCode: url.shortCode,

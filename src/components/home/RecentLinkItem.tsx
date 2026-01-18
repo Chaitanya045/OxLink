@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Copy, BarChart3 } from "lucide-react";
 import type { Url } from "@/types/dashboard";
-import { copyToClipboard } from "@/lib/analytics-utils";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 
 interface RecentLinkItemProps {
   url: Url;
@@ -60,6 +62,8 @@ function getTimeSince(date: string): string {
 }
 
 export function RecentLinkItem({ url }: RecentLinkItemProps) {
+  const { copy } = useCopyToClipboard();
+
   return (
     <Card className="hover:bg-accent/50 transition-colors">
       <CardContent className="p-4">
@@ -99,7 +103,7 @@ export function RecentLinkItem({ url }: RecentLinkItemProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => copyToClipboard(url.shortUrl)}
+              onClick={() => copy(url.shortUrl)}
             >
               <Copy className="h-4 w-4 mr-2" />
               Copy

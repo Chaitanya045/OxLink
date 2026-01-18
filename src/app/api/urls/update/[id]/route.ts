@@ -54,11 +54,17 @@ export async function PATCH(
 
     const originalUrlChanged =
       originalUrl !== undefined && originalUrl !== currentUrl.originalUrl;
-    const expiryDateChanged =
-      expiryDate !== undefined &&
-      expiryDate !== null &&
-      new Date(expiryDate).getTime() !==
-        (currentUrl.expiryDate ? new Date(currentUrl.expiryDate).getTime() : null);
+    
+    // Detect expiry date changes - handle all cases:
+    // 1. User sets a new expiry date (expiryDate is a date string)
+    // 2. User clears the expiry date (expiryDate is null)
+    // 3. User doesn't change it (expiryDate is undefined)
+    let expiryDateChanged = false;
+    if (expiryDate !== undefined) {
+      const newExpiryTime = expiryDate ? new Date(expiryDate).getTime() : null;
+      const currentExpiryTime = currentUrl.expiryDate ? new Date(currentUrl.expiryDate).getTime() : null;
+      expiryDateChanged = newExpiryTime !== currentExpiryTime;
+    }
 
     // If original URL changed, create a new version
     if (originalUrlChanged) {
@@ -100,7 +106,7 @@ export async function PATCH(
         .returning();
 
       const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
       return NextResponse.json({
         success: true,
@@ -131,7 +137,7 @@ export async function PATCH(
         .returning();
 
       const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
       return NextResponse.json({
         success: true,
@@ -151,7 +157,7 @@ export async function PATCH(
     } else {
       // No changes, return current URL
       const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
       return NextResponse.json({
         success: true,

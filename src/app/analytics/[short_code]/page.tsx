@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,13 +12,18 @@ import { AnalyticsOverview } from "@/components/analytics/AnalyticsOverview";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { AnalyticsLocationList } from "@/components/analytics/AnalyticsLocationList";
 import { AnalyticsTrafficSources } from "@/components/analytics/AnalyticsTrafficSources";
+import type { TimePeriod, DateRange } from "@/types/analytics";
 
 export default function AnalyticsPage() {
   const params = useParams();
   const shortCode = params.short_code as string;
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("7d");
+  const [customDateRange, setCustomDateRange] = useState<DateRange | null>(null);
 
-  const { loading, error, analyticsData, urlInfo, clicksChange } = useAnalytics({
+  const { loading, error, analyticsData, urlInfo, clicksChange, fetchAnalytics } = useAnalytics({
     shortCode,
+    timePeriod,
+    customDateRange,
   });
 
   if (loading) {
@@ -58,12 +64,16 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <AnalyticsHeader
-          shortCode={shortCode}
-          originalUrl={urlInfo.originalUrl}
-          shortUrl={urlInfo.shortUrl}
+          urlInfo={urlInfo}
+          onUrlUpdated={fetchAnalytics}
         />
 
-        <AnalyticsTimeFilter />
+        <AnalyticsTimeFilter
+          selectedPeriod={timePeriod}
+          customDateRange={customDateRange}
+          onPeriodChange={setTimePeriod}
+          onCustomRangeChange={setCustomDateRange}
+        />
 
         <AnalyticsOverview
           totalClicks={analyticsData.totalClicks}
