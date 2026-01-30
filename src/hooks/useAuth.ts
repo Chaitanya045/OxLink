@@ -12,7 +12,7 @@ interface UseAuthReturn {
   loginWithSocial: (provider: "google" | "github") => Promise<void>;
 }
 
-const CALLBACK_URL = "/dashboard";
+const CALLBACK_URL = "/";
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter();
