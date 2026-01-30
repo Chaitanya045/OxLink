@@ -1,28 +1,18 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Navbar } from "./Navbar";
-import { useSession } from "@/hooks/useSession";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-export function NavbarWrapper() {
-  const pathname = usePathname();
-  const { session, loading, checkSession } = useSession();
-  const [mounted, setMounted] = useState(false);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    setMounted(true);
-    checkSession();
-  }, [checkSession]);
+export async function NavbarWrapper() {
+  const hdrs = await headers();
+  const session = await auth.api.getSession({
+    headers: hdrs,
+  });
 
-  // Hide navbar on auth pages
-  const isAuthPage = pathname?.startsWith("/auth");
+  const pathname = hdrs.get("next-url") || "";
+  const isAuthPage = pathname.startsWith("/auth");
   if (isAuthPage) {
-    return null;
-  }
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
     return null;
   }
 
