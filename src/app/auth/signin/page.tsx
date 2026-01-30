@@ -1,16 +1,28 @@
 import { AuthLeftPanel } from "@/components/auth/AuthLeftPanel";
-import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthFooter } from "@/components/auth/AuthFooter";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function SignInPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SignInPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session) {
+    redirect("/");
+  }
+
   return (
     <div className="min-h-screen flex relative">
-      {/* Left Panel - Branding */}
       <AuthLeftPanel />
 
-      {/* Right Panel - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8 relative">
-        <LoginForm />
+        {await import("@/components/auth/LoginForm").then((m) => (
+          <m.LoginForm />
+        ))}
         <AuthFooter />
       </div>
     </div>
