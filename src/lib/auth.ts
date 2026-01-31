@@ -4,7 +4,10 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000", 
+  // baseURL is just the origin. Better Auth uses this + basePath to construct URLs.
+  // Next strips basePath from incoming requests, so we use origin only here.
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
+  // basePath defaults to "/api/auth" which matches the route at src/app/api/auth/[...all]/route.ts
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,

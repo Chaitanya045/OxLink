@@ -12,7 +12,10 @@ interface UseAuthReturn {
   loginWithSocial: (provider: "google" | "github") => Promise<void>;
 }
 
-const CALLBACK_URL = "/";
+// For router.push (Next handles basePath automatically)
+const INTERNAL_REDIRECT = "/";
+// For Better Auth callbackURL (needs full path including basePath)
+const AUTH_CALLBACK_URL = "/oxlink";
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter();
@@ -28,9 +31,9 @@ export function useAuth(): UseAuthReturn {
         await signIn.email({
           email: credentials.email,
           password: credentials.password,
-          callbackURL: CALLBACK_URL,
+          callbackURL: AUTH_CALLBACK_URL,
         });
-        router.push(CALLBACK_URL);
+        router.push(INTERNAL_REDIRECT);
       } catch (err) {
         setError("Invalid email or password");
         throw err;
@@ -51,9 +54,9 @@ export function useAuth(): UseAuthReturn {
           email: credentials.email,
           password: credentials.password,
           name: credentials.name,
-          callbackURL: CALLBACK_URL,
+          callbackURL: AUTH_CALLBACK_URL,
         });
-        router.push(CALLBACK_URL);
+        router.push(INTERNAL_REDIRECT);
       } catch (err) {
         setError("Failed to create account. Email may already be in use.");
         throw err;
@@ -70,7 +73,7 @@ export function useAuth(): UseAuthReturn {
       try {
         await signIn.social({
           provider,
-          callbackURL: CALLBACK_URL,
+          callbackURL: AUTH_CALLBACK_URL,
         });
       } catch (err) {
         const providerName = provider === "google" ? "Google" : "GitHub";

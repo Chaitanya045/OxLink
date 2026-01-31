@@ -1,11 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LogOut } from "lucide-react";
-import { signOut } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 
 
 interface DashboardHeaderProps {
@@ -27,7 +22,6 @@ function getLastUpdatedText(lastUpdated: Date | null): string {
 }
 
 export function DashboardHeader({ lastUpdated }: DashboardHeaderProps) {
-  const router = useRouter();
   const [lastUpdatedText, setLastUpdatedText] = useState(
     getLastUpdatedText(lastUpdated)
   );
@@ -43,16 +37,6 @@ export function DashboardHeader({ lastUpdated }: DashboardHeaderProps) {
 
     return () => clearInterval(interval);
   }, [lastUpdated]);
-
-  const handleSignOut = async () => {
-    await signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/");
-        },
-      },
-    });
-  };
 
   return (
     <div className="flex justify-between items-center mb-8">

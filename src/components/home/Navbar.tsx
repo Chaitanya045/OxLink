@@ -20,20 +20,13 @@ interface NavbarProps {
 export function Navbar({ isLoggedIn }: NavbarProps) {
   const handleSignOut = async () => {
     try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            // Clear any local storage items
-            localStorage.removeItem("pendingShortUrl");
-            // Redirect to home page with full reload
-            window.location.href = "/";
-          },
-        },
-      });
+      await signOut();
+      localStorage.removeItem("pendingShortUrl");
+      window.location.href = "/oxlink";
     } catch (error) {
       console.error("Error signing out:", error);
       // Even if there's an error, redirect to home page
-      window.location.href = "/";
+      window.location.href = "/oxlink";
     }
   };
 
