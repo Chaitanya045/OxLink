@@ -35,7 +35,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         <HeroSection />
 
         <div id="url-shortener-form">

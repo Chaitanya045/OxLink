@@ -51,6 +51,9 @@ export function DashboardShell() {
     stats: { totalClicks: 0, topPerforming: null },
   });
 
+  const [isLoadingView, setIsLoadingView] = useState(false);
+  const prevStreamUrlRef = useRef<string>("");
+
   const searchDebounceTimerRef = useRef<number | null>(null);
 
   const streamUrl = useMemo(() => {
@@ -69,6 +72,15 @@ export function DashboardShell() {
   }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
+    const isInitial = prevStreamUrlRef.current === "";
+    const isViewChange = !isInitial && prevStreamUrlRef.current !== streamUrl;
+
+    prevStreamUrlRef.current = streamUrl;
+
+    if (isViewChange) {
+      setIsLoadingView(true);
+    }
+
     const es = new EventSource(streamUrl);
 
     setState((s) => ({ ...s, connected: false }));
@@ -86,6 +98,7 @@ export function DashboardShell() {
         pagination: payload.pagination,
         stats: payload.stats,
       }));
+      setIsLoadingView(false);
     };
 
     es.addEventListener("snapshot", (ev) => {
@@ -176,6 +189,7 @@ export function DashboardShell() {
   }, []);
 
   const showSkeletons = !state.firstMessageReceived;
+  const showListSkeletons = showSkeletons || isLoadingView;
 
   const setSearchQueryDebounced = (q: string) => {
     setSearchQuery(q);
@@ -191,33 +205,34 @@ export function DashboardShell() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {cmp ? (
-          <cmp.DashboardHeader lastUpdated={state.lastUpdated} />
-        ) : (
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <div className="h-9 w-40 rounded bg-muted animate-pulse mb-2" />
-              <div className="h-5 w-80 rounded bg-muted animate-pulse" />
+    <div className="h-[calc(100dvh-64px)] bg-background flex flex-col overflow-hidden">
+      <div className="container mx-auto px-4 pt-8 pb-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0">
+          {cmp ? (
+            <cmp.DashboardHeader lastUpdated={state.lastUpdated} />
+          ) : (
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <div className="h-9 w-40 rounded bg-muted animate-pulse mb-2" />
+                <div className="h-5 w-80 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="h-5 w-44 rounded bg-muted animate-pulse hidden sm:block" />
             </div>
-            <div className="h-5 w-44 rounded bg-muted animate-pulse hidden sm:block" />
-          </div>
-        )}
+          )}
 
-        {showSkeletons || !cmp ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
-            <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
-            <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
-          </div>
-        ) : (
-          <cmp.DashboardStats
-            totalCount={state.pagination.totalCount}
-            totalClicks={state.stats.totalClicks}
-            topPerforming={state.stats.topPerforming}
-          />
-        )}
+          {showSkeletons || !cmp ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
+              <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
+              <div className="h-[108px] rounded-lg bg-muted animate-pulse" />
+            </div>
+          ) : (
+            <cmp.DashboardStats
+              totalCount={state.pagination.totalCount}
+              totalClicks={state.stats.totalClicks}
+              topPerforming={state.stats.topPerforming}
+            />
+          )}
 
         {cmp ? (
           <cmp.DashboardSearch
@@ -244,44 +259,54 @@ export function DashboardShell() {
           <div className="h-10 rounded bg-muted animate-pulse mb-6" />
         )}
 
-        {showSkeletons || !cmp ? (
-          <div className="space-y-3">
-            <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
-            <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
-            <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
+        <div className="flex-1 min-h-0">
+          <div className="h-full overflow-y-auto pr-1 overscroll-contain">
+            {showListSkeletons || !cmp ? (
+              <div className="space-y-3">
+                <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
+                <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
+                <div className="h-[120px] rounded-lg bg-muted animate-pulse" />
+              </div>
+            ) : (
+              <cmp.DashboardUrlList
+                urls={state.urls}
+                fetchingUrls={false}
+                searchQuery={searchQuery}
+                onCreateWithAlias={handleCreateWithAlias}
+                onUrlUpdated={() => {
+                  // leave as-is for now; SSE reconnect on query changes
+                }}
+              />
+            )}
           </div>
-        ) : (
-          <cmp.DashboardUrlList
-            urls={state.urls}
-            fetchingUrls={false}
-            searchQuery={searchQuery}
-            onCreateWithAlias={handleCreateWithAlias}
-            onUrlUpdated={() => {
-              // leave as-is for now; SSE reconnect on query changes
-            }}
-          />
-        )}
+        </div>
 
-        {!showSkeletons && cmp && (
-          <cmp.Pagination
-            currentPage={currentPage}
-            totalPages={pageCount}
-            pageNumbers={pageNumbers}
-            onPageChange={setCurrentPage}
-            onNextPage={() => setCurrentPage((p) => Math.min(pageCount || 1, p + 1))}
-            onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          />
-        )}
-
-        {cmp && (
-          <cmp.CreateUrlModal
-            prefilledAlias={prefilledAlias}
-            open={createModalOpen}
-            onOpenChange={setCreateModalOpen}
-            onSuccess={handleCreateSuccess}
-          />
-        )}
+          {cmp && (
+            <cmp.CreateUrlModal
+              prefilledAlias={prefilledAlias}
+              open={createModalOpen}
+              onOpenChange={setCreateModalOpen}
+              onSuccess={handleCreateSuccess}
+            />
+          )}
+        </div>
       </div>
+
+
+      {!showSkeletons && cmp && (
+        <div className="sticky bottom-0 z-30 border-t border-border/70 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/50">
+          <div className="container mx-auto px-4 py-4">
+            <cmp.Pagination
+              currentPage={currentPage}
+              totalPages={pageCount}
+              pageNumbers={pageNumbers}
+              onPageChange={setCurrentPage}
+              onNextPage={() => setCurrentPage((p) => Math.min(pageCount || 1, p + 1))}
+              onPreviousPage={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

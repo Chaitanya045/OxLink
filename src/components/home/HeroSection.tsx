@@ -2,7 +2,7 @@ import { Zap } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section className="py-20 px-4">
+    <section className="py-16 px-4">
       <div className="container mx-auto max-w-4xl text-center">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8">

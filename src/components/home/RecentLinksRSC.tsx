@@ -13,7 +13,7 @@ export async function RecentLinksRSC({ urls }: RecentLinksRSCProps) {
   }
 
   return (
-    <section className="py-12 px-4">
+    <section className="py-10 px-4">
       <div className="container mx-auto max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
