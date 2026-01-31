@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { apiPath } from "@/lib/paths";
 import type {
   PaginationData,
   SortBy,
@@ -93,7 +94,7 @@ export function DashboardShell() {
 
     const fetchSnapshot = async () => {
       try {
-        const res = await fetch(`/api/urls?${queryString}`, {
+        const res = await fetch(`${apiPath(`/api/urls?${queryString}`)}`, {
           credentials: "include",
           cache: "no-store",
         });
@@ -104,7 +105,7 @@ export function DashboardShell() {
 
         const urlsPayload = await res.json();
 
-        const statsRes = await fetch("/api/urls/stats", {
+        const statsRes = await fetch(apiPath("/api/urls/stats"), {
           credentials: "include",
           cache: "no-store",
         });

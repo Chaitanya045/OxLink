@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Url } from "@/types/dashboard";
+import { apiPath } from "@/lib/paths";
 
 interface EditUrlModalProps {
   url: Url | null;
@@ -77,7 +78,7 @@ export function EditUrlModal({
         updateData.expiryDate = null;
       }
 
-      const response = await fetch(`/api/urls/update/${url.id}`, {
+      const response = await fetch(apiPath(`/api/urls/update/${url.id}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updateData),

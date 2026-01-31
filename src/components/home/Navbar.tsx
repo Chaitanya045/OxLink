@@ -12,6 +12,7 @@ import { LinkIcon, User, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/lib/auth-client";
 
+
 interface NavbarProps {
   isLoggedIn: boolean;
 }

@@ -11,6 +11,7 @@ export default async function AnalyticsPage({
   params: Promise<{ short_code: string }>;
 }) {
   const hdrs = await headers();
+
   const session = await auth.api.getSession({ headers: hdrs });
 
   if (!session) {
@@ -21,7 +22,7 @@ export default async function AnalyticsPage({
 
   const origin = `${hdrs.get("x-forwarded-proto") ?? "http"}://${hdrs.get("host") ?? "localhost:3000"}`;
 
-  const res = await fetch(`${origin}/api/urls/${short_code}/analytics`, {
+  const res = await fetch(`${origin}/oxlink/api/urls/${short_code}/analytics`, {
     headers: {
       cookie: hdrs.get("cookie") ?? "",
     },

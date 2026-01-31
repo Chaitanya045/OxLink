@@ -13,6 +13,7 @@ import { AnalyticsLocationList } from "@/components/analytics/AnalyticsLocationL
 import { AnalyticsTrafficSources } from "@/components/analytics/AnalyticsTrafficSources";
 import type { AnalyticsData, DateRange, TimePeriod, UrlClick, UrlInfo } from "@/types/analytics";
 import { computeAnalyticsFromClicks } from "@/lib/analytics/computeAnalytics";
+import { apiPath } from "@/lib/paths";
 
 const POLL_INTERVAL_MS = 10_000;
 const IDLE_STOP_MS = 60_000;
@@ -70,7 +71,9 @@ export default function AnalyticsShell({
 
     const fetchSnapshot = async () => {
       try {
-        const res = await fetch(`/api/urls/${shortCode}/analytics?${qs.toString()}`, {
+        const res = await fetch(
+          apiPath(`/api/urls/${shortCode}/analytics?${qs.toString()}`),
+          {
           credentials: "include",
           cache: "no-store",
         });
@@ -155,7 +158,7 @@ export default function AnalyticsShell({
   const refreshUrlInfo = async () => {
     try {
       setLoadState((prev) => (prev === "ready" ? "refreshing" : prev));
-      const res = await fetch(`/api/urls/${shortCode}/analytics`, {
+      const res = await fetch(apiPath(`/api/urls/${shortCode}/analytics`), {
         credentials: "include",
         cache: "no-store",
       });

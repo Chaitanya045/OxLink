@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+
 import { LinkIcon, BarChart3, Star, TrendingUp } from "lucide-react";
 import type { Url } from "@/types/dashboard";
 
@@ -26,17 +27,12 @@ export function DashboardStats({
   };
 
   const getShortUrlDisplay = (url: Url) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const shortCode = url.customAlias || url.shortCode;
+
     try {
-      const urlObj = new URL(baseUrl);
-      return `${urlObj.host}/${shortCode}`;
+      const urlObj = new URL(url.shortUrl);
+      return `${urlObj.host}${urlObj.pathname}`;
     } catch {
-      // Fallback: extract domain from baseUrl string
-      const match = baseUrl.match(/https?:\/\/([^\/]+)/);
-      if (match) {
-        return `${match[1]}/${shortCode}`;
-      }
       return shortCode;
     }
   };

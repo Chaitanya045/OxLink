@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import type { Session } from "@/types/dashboard";
+import { apiPath } from "@/lib/paths";
 
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
@@ -7,7 +8,7 @@ export function useSession() {
 
   const checkSession = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/session", {
+      const response = await fetch(apiPath("/api/auth/session"), {
         credentials: "include",
       });
 

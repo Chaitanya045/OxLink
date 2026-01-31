@@ -6,12 +6,9 @@ import { urls, urlClicks } from "@/db/schema";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { Url } from "@/types/dashboard";
+import { buildPublicShortUrl } from "@/lib/publicUrl";
 
 async function getRecentUrlsForUser(userId: string): Promise<Url[]> {
-  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(
-    /\/$/,
-    ""
-  );
 
   const rows = await db
     .select()
@@ -45,7 +42,7 @@ async function getRecentUrlsForUser(userId: string): Promise<Url[]> {
     createdAt: u.createdAt.toISOString(),
     updatedAt: u.updatedAt?.toISOString(),
     expiryDate: u.expiryDate?.toISOString() ?? null,
-    shortUrl: `${baseUrl}/${u.customAlias || u.shortCode}`,
+    shortUrl: buildPublicShortUrl(u.customAlias || u.shortCode),
     clickCount: clickCounts.get(u.id) ?? 0,
   }));
 }

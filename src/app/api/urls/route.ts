@@ -9,6 +9,7 @@ import {
 import { eq, desc, asc, sql, inArray, and, or, ilike, isNull, gt, lte, isNotNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { consumeUserUrlCreateToken } from "@/lib/rateLimitStore";
+import { buildPublicShortUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -158,7 +159,6 @@ export async function GET(req: NextRequest) {
       userUrls = sortedUrls.slice(offset, offset + limit);
     }
 
-    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
     const data = userUrls.map((url) => ({
       id: url.id,
@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
       createdAt: url.createdAt,
       updatedAt: url.updatedAt,
       expiryDate: url.expiryDate,
-      shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
+      shortUrl: buildPublicShortUrl(url.customAlias || url.shortCode),
       clickCount: clickCountsMap.get(url.id) ?? 0,
     }));
 
@@ -314,9 +314,8 @@ export async function POST(req: NextRequest) {
           shortCode: newUrl.shortCode,
           originalUrl: newUrl.originalUrl,
           customAlias: newUrl.customAlias,
-          shortUrl: `${
-            (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "")
-          }/${newUrl.customAlias || newUrl.shortCode}`,
+          shortUrl: buildPublicShortUrl(newUrl.customAlias || newUrl.shortCode),
+
           expiryDate: newUrl.expiryDate,
           createdAt: newUrl.createdAt,
           updatedAt: newUrl.updatedAt,

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import type { Url } from "@/types/dashboard";
+import { apiPath } from "@/lib/paths";
 
 interface CreateUrlData {
   originalUrl: string;
@@ -18,7 +19,7 @@ export function useUrlShortener() {
     setCreating(true);
 
     try {
-      const response = await fetch("/api/urls", {
+      const response = await fetch(apiPath("/api/urls"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

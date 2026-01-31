@@ -4,6 +4,7 @@ import { urls } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { isValidUrl } from "@/lib/utils";
+import { buildPublicShortUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -105,8 +106,7 @@ export async function PATCH(
         })
         .returning();
 
-      const baseUrl =
-        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+
 
       return NextResponse.json({
         success: true,
@@ -115,7 +115,7 @@ export async function PATCH(
           shortCode: newVersion.shortCode,
           originalUrl: newVersion.originalUrl,
           customAlias: newVersion.customAlias,
-          shortUrl: `${baseUrl}/${newVersion.customAlias || newVersion.shortCode}`,
+          shortUrl: buildPublicShortUrl(newVersion.customAlias || newVersion.shortCode),
           expiryDate: newVersion.expiryDate,
           createdAt: newVersion.createdAt,
           updatedAt: newVersion.updatedAt,
@@ -123,41 +123,8 @@ export async function PATCH(
           isLatest: newVersion.isLatest,
         },
       });
-    } else if (expiryDateChanged) {
-      // Only expiry date changed, update in place
-      const parsedExpiryDate = expiryDate ? new Date(expiryDate) : null;
-
-      const [updatedUrl] = await db
-        .update(urls)
-        .set({ 
-          expiryDate: parsedExpiryDate,
-          updatedAt: new Date(), // Explicitly set updatedAt
-        })
-        .where(eq(urls.id, urlId))
-        .returning();
-
-      const baseUrl =
-        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          id: updatedUrl.id,
-          shortCode: updatedUrl.shortCode,
-          originalUrl: updatedUrl.originalUrl,
-          customAlias: updatedUrl.customAlias,
-          shortUrl: `${baseUrl}/${updatedUrl.customAlias || updatedUrl.shortCode}`,
-          expiryDate: updatedUrl.expiryDate,
-          createdAt: updatedUrl.createdAt,
-          updatedAt: updatedUrl.updatedAt,
-          version: updatedUrl.version,
-          isLatest: updatedUrl.isLatest,
-        },
-      });
     } else {
       // No changes, return current URL
-      const baseUrl =
-        (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
       return NextResponse.json({
         success: true,
@@ -166,7 +133,7 @@ export async function PATCH(
           shortCode: currentUrl.shortCode,
           originalUrl: currentUrl.originalUrl,
           customAlias: currentUrl.customAlias,
-          shortUrl: `${baseUrl}/${currentUrl.customAlias || currentUrl.shortCode}`,
+          shortUrl: buildPublicShortUrl(currentUrl.customAlias || currentUrl.shortCode),
           expiryDate: currentUrl.expiryDate,
           createdAt: currentUrl.createdAt,
           updatedAt: currentUrl.updatedAt,

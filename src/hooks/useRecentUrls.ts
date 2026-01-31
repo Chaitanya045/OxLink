@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import type { Url } from "@/types/dashboard";
+import { apiPath } from "@/lib/paths";
 
 export function useRecentUrls() {
   const [recentUrls, setRecentUrls] = useState<Url[]>([]);
@@ -9,9 +10,12 @@ export function useRecentUrls() {
   const fetchRecentUrls = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/urls?page=1&limit=3&sortBy=date&sortOrder=desc", {
-        credentials: "include",
-      });
+      const response = await fetch(
+        apiPath("/api/urls?page=1&limit=3&sortBy=date&sortOrder=desc"),
+        {
+          credentials: "include",
+        }
+      );
       if (response.ok) {
         const data = await response.json();
         setRecentUrls(data.data);

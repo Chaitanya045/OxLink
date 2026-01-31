@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { urls, urlClicks } from "@/db/schema";
 import { eq, sql, inArray, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { buildPublicShortUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -80,15 +81,13 @@ export async function GET(req: NextRequest) {
       const clicks = clickCountsMap.get(url.id) ?? 0;
       if (clicks > maxClicks) {
         maxClicks = clicks;
-        const baseUrl =
-          (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
         topPerforming = {
           id: url.id,
           shortCode: url.shortCode,
           customAlias: url.customAlias,
           originalUrl: url.originalUrl,
           clickCount: clicks,
-          shortUrl: `${baseUrl}/${url.customAlias || url.shortCode}`,
+          shortUrl: buildPublicShortUrl(url.customAlias || url.shortCode),
         };
       }
     }

@@ -70,7 +70,7 @@ export async function GET(
         id: urlRecord.id,
         shortCode: urlRecord.shortCode,
         originalUrl: urlRecord.originalUrl,
-        shortUrl: `${req.headers.get("x-forwarded-proto") ?? "http"}://${req.headers.get("host") ?? "localhost:3000"}/${urlRecord.customAlias ?? urlRecord.shortCode}`,
+        shortUrl: `${req.headers.get("x-forwarded-proto") ?? "http"}://${req.headers.get("host") ?? "localhost:3000"}/oxlink/${urlRecord.customAlias ?? urlRecord.shortCode}`,
         customAlias: urlRecord.customAlias,
         expiryDate: urlRecord.expiryDate,
         createdAt: urlRecord.createdAt,

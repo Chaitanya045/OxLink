@@ -30,19 +30,7 @@ export function AnalyticsHeader({
       const url = new URL(shortUrl);
       return `${url.host}/${shortCode}`;
     } catch {
-      // Fallback to environment variable or default
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-      try {
-        const url = new URL(baseUrl);
-        return `${url.host}/${shortCode}`;
-      } catch {
-        // Last resort: extract domain from baseUrl string
-        const match = baseUrl.match(/https?:\/\/([^\/]+)/);
-        if (match) {
-          return `${match[1]}/${shortCode}`;
-        }
-        return shortCode;
-      }
+      return shortCode;
     }
   };
 

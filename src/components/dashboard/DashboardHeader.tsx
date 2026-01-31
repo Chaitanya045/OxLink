@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
+
 interface DashboardHeaderProps {
   lastUpdated: Date | null;
 }
