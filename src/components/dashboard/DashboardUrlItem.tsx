@@ -32,6 +32,7 @@ export function DashboardUrlItem({ url, onUrlUpdated }: DashboardUrlItemProps) {
 
   const handleCardClick = () => {
     router.push(analyticsUrl);
+    router.refresh();
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
