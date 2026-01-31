@@ -11,7 +11,11 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { CHART_COLORS } from "@/hooks/useAnalytics";
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+];
 import type { TimeSeriesData, DeviceData } from "@/types/analytics";
 
 interface AnalyticsChartsProps {
