@@ -2,8 +2,8 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { Footer } from "@/components/home/Footer";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { urls } from "@/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { urls, urlClicks } from "@/db/schema";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { Url } from "@/types/dashboard";
 
@@ -20,6 +20,23 @@ async function getRecentUrlsForUser(userId: string): Promise<Url[]> {
     .orderBy(desc(urls.createdAt))
     .limit(3);
 
+  const clickCounts = new Map<number, number>();
+
+  if (rows.length) {
+    const counts = await db
+      .select({
+        urlId: urlClicks.urlId,
+        count: sql<number>`COUNT(*)`.as("count"),
+      })
+      .from(urlClicks)
+      .where(inArray(urlClicks.urlId, rows.map((r) => r.id)))
+      .groupBy(urlClicks.urlId);
+
+    counts.forEach((c) => {
+      clickCounts.set(c.urlId, Number(c.count));
+    });
+  }
+
   return rows.map((u) => ({
     id: u.id,
     shortCode: u.shortCode,
@@ -29,7 +46,7 @@ async function getRecentUrlsForUser(userId: string): Promise<Url[]> {
     updatedAt: u.updatedAt?.toISOString(),
     expiryDate: u.expiryDate?.toISOString() ?? null,
     shortUrl: `${baseUrl}/${u.customAlias || u.shortCode}`,
-    clickCount: 0,
+    clickCount: clickCounts.get(u.id) ?? 0,
   }));
 }
 
