@@ -8,6 +8,7 @@ import {
 } from "@/lib/utils";
 import { eq, desc, asc, sql, inArray, and, or, ilike, isNull, gt, lte, isNotNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { consumeUserUrlCreateToken } from "@/lib/rateLimitStore";
 
 export const dynamic = "force-dynamic";
 
@@ -201,6 +202,31 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    const { result: rate } = await consumeUserUrlCreateToken({
+      userId: session.user.id,
+    });
+
+    if (!rate.allowed) {
+      const retryAfterSeconds = rate.retryAfterMs ? Math.ceil(rate.retryAfterMs / 1000) : 0;
+
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded. Please wait before creating more short URLs.",
+          limit: 20,
+          remaining: rate.remaining,
+          retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
+            "X-RateLimit-Limit": "20",
+            "X-RateLimit-Remaining": String(rate.remaining),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const { originalUrl, customAlias, expiryDate } = body;
 

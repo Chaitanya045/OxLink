@@ -28,6 +28,16 @@ export const urls = table(
   ]
 );
 
+export const rateLimitBuckets = table(
+  "rate_limit_buckets",
+  {
+    key: t.text("key").primaryKey(),
+    tokens: t.integer("tokens").notNull(),
+    updatedAt: t.timestamp("updated_at").notNull(),
+  },
+  (table) => [t.index("rate_limit_buckets_updated_at_idx").on(table.updatedAt)]
+);
+
 export const urlClicks = table(
   "url_clicks",
   {
@@ -176,3 +186,5 @@ export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
 export type UrlClicks = typeof urlClicks.$inferSelect;
 export type NewUrlClicks = typeof urlClicks.$inferInsert;
+export type rateLimitBuckets = typeof rateLimitBuckets.$inferSelect;
+export type NewRateLimitBuckets = typeof rateLimitBuckets.$inferInsert;
