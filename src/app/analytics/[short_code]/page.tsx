@@ -1,102 +1,51 @@
-"use client";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import type { UrlClick, UrlInfo } from "@/types/analytics";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useAnalytics } from "@/hooks/useAnalytics";
-import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
-import { AnalyticsTimeFilter } from "@/components/analytics/AnalyticsTimeFilter";
-import { AnalyticsOverview } from "@/components/analytics/AnalyticsOverview";
-import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
-import { AnalyticsLocationList } from "@/components/analytics/AnalyticsLocationList";
-import { AnalyticsTrafficSources } from "@/components/analytics/AnalyticsTrafficSources";
-import type { TimePeriod, DateRange } from "@/types/analytics";
+export const dynamic = "force-dynamic";
 
-export default function AnalyticsPage() {
-  const params = useParams();
-  const shortCode = params.short_code as string;
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("7d");
-  const [customDateRange, setCustomDateRange] = useState<DateRange | null>(null);
+export default async function AnalyticsPage({
+  params,
+}: {
+  params: Promise<{ short_code: string }>;
+}) {
+  const hdrs = await headers();
+  const session = await auth.api.getSession({ headers: hdrs });
 
-  const { loading, error, analyticsData, urlInfo, clicksChange, fetchAnalytics } = useAnalytics({
-    shortCode,
-    timePeriod,
-    customDateRange,
+  if (!session) {
+    redirect("/auth/signin");
+  }
+
+  const { short_code } = await params;
+
+  const origin = `${hdrs.get("x-forwarded-proto") ?? "http"}://${hdrs.get("host") ?? "localhost:3000"}`;
+
+  const res = await fetch(`${origin}/api/urls/${short_code}/analytics`, {
+    headers: {
+      cookie: hdrs.get("cookie") ?? "",
+    },
+    cache: "no-store",
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading analytics...</p>
-      </div>
-    );
+  if (!res.ok) {
+    if (res.status === 404) {
+      redirect("/dashboard");
+    }
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive mb-4">{error}</p>
-            <Link href="/dashboard">
-              <Button>Back to Dashboard</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const data = (await res.json().catch(() => null)) as
+    | { urlClicksData?: UrlClick[]; urlInfo?: UrlInfo }
+    | null;
 
-  if (!analyticsData || !urlInfo) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">No analytics data available</p>
-      </div>
-    );
-  }
+  const initialClicks = data?.urlClicksData ?? [];
+  const initialUrlInfo = data?.urlInfo ?? null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <AnalyticsHeader
-          urlInfo={urlInfo}
-          onUrlUpdated={fetchAnalytics}
-        />
-
-        <AnalyticsTimeFilter
-          selectedPeriod={timePeriod}
-          customDateRange={customDateRange}
-          onPeriodChange={setTimePeriod}
-          onCustomRangeChange={setCustomDateRange}
-        />
-
-        <AnalyticsOverview
-          totalClicks={analyticsData.totalClicks}
-          uniqueVisitors={analyticsData.uniqueVisitors}
-          topReferrer={analyticsData.topReferrer}
-          topLocation={analyticsData.topLocation}
-          clicksChange={clicksChange}
-        />
-
-        <AnalyticsCharts
-          timeSeriesData={analyticsData.timeSeriesData}
-          deviceData={analyticsData.deviceData}
-        />
-
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AnalyticsLocationList
-            locationData={analyticsData.locationData}
-            totalClicks={analyticsData.totalClicks}
-          />
-          <AnalyticsTrafficSources referrerData={analyticsData.referrerData} />
-        </div>
-      </div>
-    </div>
-  );
+  return await import("@/components/analytics/AnalyticsShell").then((m) => (
+    <m.default
+      shortCode={short_code}
+      initialClicks={initialClicks}
+      initialUrlInfo={initialUrlInfo}
+    />
+  ));
 }

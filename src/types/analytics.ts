@@ -1,4 +1,4 @@
-export type TimePeriod = "7d" | "30d" | "all" | "custom";
+export type TimePeriod = "1h" | "24h" | "7d" | "30d" | "all" | "custom";
 
 export interface DateRange {
   start: Date;

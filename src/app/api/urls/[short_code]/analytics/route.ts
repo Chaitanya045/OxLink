@@ -53,13 +53,31 @@ export async function GET(
       );
     }
 
+    const searchParams = req.nextUrl.searchParams;
+    const timePeriod = searchParams.get("timePeriod") ?? "7d";
+    const start = searchParams.get("start");
+    const end = searchParams.get("end");
+
     // Fetch all analytics data for this URL version (by urlId, not shortCode)
     const urlClicksData = await db
       .select()
       .from(urlClicks)
       .where(eq(urlClicks.urlId, urlRecord.id));
 
-    return NextResponse.json({ urlClicksData });
+    return NextResponse.json({
+      urlClicksData,
+      urlInfo: {
+        id: urlRecord.id,
+        shortCode: urlRecord.shortCode,
+        originalUrl: urlRecord.originalUrl,
+        shortUrl: `${req.headers.get("x-forwarded-proto") ?? "http"}://${req.headers.get("host") ?? "localhost:3000"}/${urlRecord.customAlias ?? urlRecord.shortCode}`,
+        customAlias: urlRecord.customAlias,
+        expiryDate: urlRecord.expiryDate,
+        createdAt: urlRecord.createdAt,
+        version: urlRecord.version,
+      },
+      meta: { timePeriod, start, end },
+    });
   } catch (error) {
     console.error("Error fetching short URL analytics:", error);
     return NextResponse.json(

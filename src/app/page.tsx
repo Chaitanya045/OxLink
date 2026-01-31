@@ -1,37 +1,44 @@
 import { HeroSection } from "@/components/home/HeroSection";
 import { Footer } from "@/components/home/Footer";
 import { auth } from "@/lib/auth";
+import { db } from "@/db";
+import { urls } from "@/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { Url } from "@/types/dashboard";
 
-export const dynamic = "force-dynamic";
+async function getRecentUrlsForUser(userId: string): Promise<Url[]> {
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(
+    /\/$/,
+    ""
+  );
+
+  const rows = await db
+    .select()
+    .from(urls)
+    .where(and(eq(urls.createdBy, userId), eq(urls.isLatest, true)))
+    .orderBy(desc(urls.createdAt))
+    .limit(3);
+
+  return rows.map((u) => ({
+    id: u.id,
+    shortCode: u.shortCode,
+    originalUrl: u.originalUrl,
+    customAlias: u.customAlias ?? null,
+    createdAt: u.createdAt.toISOString(),
+    updatedAt: u.updatedAt?.toISOString(),
+    expiryDate: u.expiryDate?.toISOString() ?? null,
+    shortUrl: `${baseUrl}/${u.customAlias || u.shortCode}`,
+    clickCount: 0,
+  }));
+}
 
 export default async function HomePage() {
   const hdrs = await headers();
-  const session = await auth.api.getSession({
-    headers: hdrs,
-  });
 
-  let recentUrls: Url[] = [];
+  const session = await auth.api.getSession({ headers: hdrs });
 
-  if (session) {
-    const origin = `${hdrs.get("x-forwarded-proto") ?? "http"}://${hdrs.get("host") ?? "localhost:3000"}`;
-
-    const res = await fetch(
-      `${origin}/api/urls?page=1&limit=3&sortBy=date&sortOrder=desc`,
-      {
-        headers: {
-          cookie: hdrs.get("cookie") ?? "",
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (res.ok) {
-      const data = (await res.json().catch(() => null)) as { data?: Url[] } | null;
-      recentUrls = data?.data ?? [];
-    }
-  }
+  const recentUrls = session ? await getRecentUrlsForUser(session.user.id) : [];
 
   return (
     <div className="min-h-screen flex flex-col">

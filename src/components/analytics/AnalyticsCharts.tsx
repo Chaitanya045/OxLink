@@ -55,7 +55,8 @@ export function AnalyticsCharts({
                 dataKey="clicks"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                dot={false}
+                activeDot={false}
               />
             </LineChart>
           </ResponsiveContainer>

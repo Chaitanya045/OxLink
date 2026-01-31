@@ -78,6 +78,20 @@ export function AnalyticsTimeFilter({
     <>
       <div className="flex items-center gap-2 mb-6">
         <Button
+          variant={selectedPeriod === "1h" ? "outline" : "ghost"}
+          size="sm"
+          onClick={() => handlePeriodClick("1h")}
+        >
+          Last 1 Hour
+        </Button>
+        <Button
+          variant={selectedPeriod === "24h" ? "outline" : "ghost"}
+          size="sm"
+          onClick={() => handlePeriodClick("24h")}
+        >
+          Last 24 Hours
+        </Button>
+        <Button
           variant={selectedPeriod === "7d" ? "outline" : "ghost"}
           size="sm"
           onClick={() => handlePeriodClick("7d")}

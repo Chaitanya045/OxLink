@@ -9,12 +9,18 @@ import type {
   Url,
 } from "@/types/dashboard";
 
-export type DashboardStreamPayload = {
+const POLL_INTERVAL_MS = 10_000;
+const IDLE_STOP_MS = 60_000;
+
+export type DashboardPollPayload = {
   urls: Url[];
   pagination: PaginationData;
   stats: { totalClicks: number; topPerforming: Url | null };
   lastUpdated: string;
 };
+
+// Backwards compat for older references
+export type DashboardStreamPayload = DashboardPollPayload;
 
 type DashboardLiveState = {
   connected: boolean;
@@ -56,7 +62,7 @@ export function DashboardShell() {
 
   const searchDebounceTimerRef = useRef<number | null>(null);
 
-  const streamUrl = useMemo(() => {
+  const queryString = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(currentPage));
     params.set("limit", String(DEFAULT_PAGINATION.limit));
@@ -68,65 +74,118 @@ export function DashboardShell() {
     params.set("sortBy", sortBy);
     params.set("sortOrder", sortOrder);
 
-    return `/api/dashboard/stream?${params.toString()}`;
+    return params.toString();
   }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     const isInitial = prevStreamUrlRef.current === "";
-    const isViewChange = !isInitial && prevStreamUrlRef.current !== streamUrl;
+    const isViewChange = !isInitial && prevStreamUrlRef.current !== queryString;
 
-    prevStreamUrlRef.current = streamUrl;
+    prevStreamUrlRef.current = queryString;
 
     if (isViewChange) {
       setIsLoadingView(true);
     }
 
-    const es = new EventSource(streamUrl);
+    let cancelled = false;
+    let intervalId: number | null = null;
+    let idleTimerId: number | null = null;
 
-    setState((s) => ({ ...s, connected: false }));
-
-    es.onopen = () => {
-      setState((s) => ({ ...s, connected: true }));
-    };
-
-    const handlePayload = (payload: DashboardStreamPayload) => {
-      setState((s) => ({
-        ...s,
-        firstMessageReceived: true,
-        lastUpdated: payload.lastUpdated ? new Date(payload.lastUpdated) : new Date(),
-        urls: payload.urls,
-        pagination: payload.pagination,
-        stats: payload.stats,
-      }));
-      setIsLoadingView(false);
-    };
-
-    es.addEventListener("snapshot", (ev) => {
+    const fetchSnapshot = async () => {
       try {
-        const payload: DashboardStreamPayload = JSON.parse((ev as MessageEvent).data);
-        handlePayload(payload);
-      } catch {
-        // ignore malformed messages
-      }
-    });
+        const res = await fetch(`/api/urls?${queryString}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
 
-    es.onmessage = (event) => {
-      try {
-        const payload: DashboardStreamPayload = JSON.parse(event.data);
-        handlePayload(payload);
+        if (!res.ok) {
+          throw new Error("Failed to fetch URLs");
+        }
+
+        const urlsPayload = await res.json();
+
+        const statsRes = await fetch("/api/urls/stats", {
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const statsPayload = statsRes.ok ? await statsRes.json() : null;
+
+        if (cancelled) return;
+
+        setState((s) => ({
+          ...s,
+          connected: true,
+          firstMessageReceived: true,
+          lastUpdated: new Date(),
+          urls: urlsPayload.data ?? [],
+          pagination: urlsPayload.pagination ?? DEFAULT_PAGINATION,
+          stats: {
+            totalClicks: statsPayload?.totalClicks ?? 0,
+            topPerforming: statsPayload?.topPerforming ?? null,
+          },
+        }));
+        setIsLoadingView(false);
       } catch {
-        // ignore malformed messages
+        if (cancelled) return;
+        setState((s) => ({ ...s, connected: false }));
       }
     };
 
-    es.onerror = () => {
-      setState((s) => ({ ...s, connected: false }));
+    const start = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetchSnapshot();
+      if (intervalId) window.clearInterval(intervalId);
+      intervalId = window.setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        void fetchSnapshot();
+      }, POLL_INTERVAL_MS);
     };
+
+    const stop = () => {
+      if (intervalId) window.clearInterval(intervalId);
+      intervalId = null;
+      if (idleTimerId) window.clearTimeout(idleTimerId);
+      idleTimerId = null;
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        start();
+        if (idleTimerId) window.clearTimeout(idleTimerId);
+        idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
+      } else {
+        stop();
+      }
+    };
+
+    if (document.visibilityState === "visible") start();
+
+    const onActivity = () => {
+      if (document.visibilityState !== "visible") return;
+      start();
+      if (idleTimerId) window.clearTimeout(idleTimerId);
+      idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
+    };
+
+    window.addEventListener("focus", onActivity);
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pointerdown", onActivity);
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("scroll", onActivity, { passive: true });
 
     return () => {
-      es.close();
+      cancelled = true;
+      stop();
+      window.removeEventListener("focus", onActivity);
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("scroll", onActivity);
     };
-  }, [streamUrl]);
+  }, [queryString]);
 
   const handleCreateWithAlias = (alias: string) => {
     setPrefilledAlias(alias);
@@ -136,8 +195,7 @@ export function DashboardShell() {
   const handleCreateSuccess = () => {
     setCreateModalOpen(false);
     setPrefilledAlias("");
-    // SSE reconnect happens automatically on next mount; user can also tweak any filter
-    // We can add a manual refresh later if needed.
+    // Polling continues automatically; we can add a manual refresh later if needed.
   };
 
   const pageCount = state.pagination.totalPages || 0;
@@ -273,9 +331,9 @@ export function DashboardShell() {
                 fetchingUrls={false}
                 searchQuery={searchQuery}
                 onCreateWithAlias={handleCreateWithAlias}
-                onUrlUpdated={() => {
-                  // leave as-is for now; SSE reconnect on query changes
-                }}
+                  onUrlUpdated={() => {
+                    // no-op for now (polling will pick up updates)
+                  }}
               />
             )}
           </div>
