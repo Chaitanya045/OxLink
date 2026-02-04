@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { apiPath } from "@/lib/paths";
 import type {
   PaginationData,
   SortBy,
@@ -9,9 +8,8 @@ import type {
   StatusFilter,
   Url,
 } from "@/types/dashboard";
-
-const POLL_INTERVAL_MS = 10_000;
-const IDLE_STOP_MS = 60_000;
+import { useDebounce } from "@/hooks/useDebounce";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 export type DashboardPollPayload = {
   urls: Url[];
@@ -22,15 +20,6 @@ export type DashboardPollPayload = {
 
 // Backwards compat for older references
 export type DashboardStreamPayload = DashboardPollPayload;
-
-type DashboardLiveState = {
-  connected: boolean;
-  firstMessageReceived: boolean;
-  lastUpdated: Date | null;
-  urls: Url[];
-  pagination: PaginationData;
-  stats: { totalClicks: number; topPerforming: Url | null };
-};
 
 const DEFAULT_PAGINATION: PaginationData = {
   page: 1,
@@ -46,29 +35,20 @@ export function DashboardShell() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 250);
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [prefilledAlias, setPrefilledAlias] = useState("");
 
-  const [state, setState] = useState<DashboardLiveState>({
-    connected: false,
-    firstMessageReceived: false,
-    lastUpdated: null,
-    urls: [],
-    pagination: DEFAULT_PAGINATION,
-    stats: { totalClicks: 0, topPerforming: null },
-  });
-
   const [isLoadingView, setIsLoadingView] = useState(false);
   const prevStreamUrlRef = useRef<string>("");
-
-  const searchDebounceTimerRef = useRef<number | null>(null);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     params.set("page", String(currentPage));
     params.set("limit", String(DEFAULT_PAGINATION.limit));
 
-    const q = searchQuery.trim();
+    const q = debouncedSearchQuery.trim();
     if (q) params.set("search", q);
     if (statusFilter !== "all") params.set("status", statusFilter);
 
@@ -76,7 +56,9 @@ export function DashboardShell() {
     params.set("sortOrder", sortOrder);
 
     return params.toString();
-  }, [currentPage, searchQuery, statusFilter, sortBy, sortOrder]);
+  }, [currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
+
+  const { state, isFetchingUrls, refetch } = useDashboardData({ queryString });
 
   useEffect(() => {
     const isInitial = prevStreamUrlRef.current === "";
@@ -84,109 +66,13 @@ export function DashboardShell() {
 
     prevStreamUrlRef.current = queryString;
 
-    if (isViewChange) {
-      setIsLoadingView(true);
-    }
-
-    let cancelled = false;
-    let intervalId: number | null = null;
-    let idleTimerId: number | null = null;
-
-    const fetchSnapshot = async () => {
-      try {
-        const res = await fetch(`${apiPath(`/api/urls?${queryString}`)}`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch URLs");
-        }
-
-        const urlsPayload = await res.json();
-
-        const statsRes = await fetch(apiPath("/api/urls/stats"), {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        const statsPayload = statsRes.ok ? await statsRes.json() : null;
-
-        if (cancelled) return;
-
-        setState((s) => ({
-          ...s,
-          connected: true,
-          firstMessageReceived: true,
-          lastUpdated: new Date(),
-          urls: urlsPayload.data ?? [],
-          pagination: urlsPayload.pagination ?? DEFAULT_PAGINATION,
-          stats: {
-            totalClicks: statsPayload?.totalClicks ?? 0,
-            topPerforming: statsPayload?.topPerforming ?? null,
-          },
-        }));
-        setIsLoadingView(false);
-      } catch {
-        if (cancelled) return;
-        setState((s) => ({ ...s, connected: false }));
-      }
-    };
-
-    const start = () => {
-      if (document.visibilityState !== "visible") return;
-      void fetchSnapshot();
-      if (intervalId) window.clearInterval(intervalId);
-      intervalId = window.setInterval(() => {
-        if (document.visibilityState !== "visible") return;
-        void fetchSnapshot();
-      }, POLL_INTERVAL_MS);
-    };
-
-    const stop = () => {
-      if (intervalId) window.clearInterval(intervalId);
-      intervalId = null;
-      if (idleTimerId) window.clearTimeout(idleTimerId);
-      idleTimerId = null;
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        start();
-        if (idleTimerId) window.clearTimeout(idleTimerId);
-        idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
-      } else {
-        stop();
-      }
-    };
-
-    if (document.visibilityState === "visible") start();
-
-    const onActivity = () => {
-      if (document.visibilityState !== "visible") return;
-      start();
-      if (idleTimerId) window.clearTimeout(idleTimerId);
-      idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
-    };
-
-    window.addEventListener("focus", onActivity);
-    window.addEventListener("blur", stop);
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pointerdown", onActivity);
-    window.addEventListener("keydown", onActivity);
-    window.addEventListener("scroll", onActivity, { passive: true });
-
-    return () => {
-      cancelled = true;
-      stop();
-      window.removeEventListener("focus", onActivity);
-      window.removeEventListener("blur", stop);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pointerdown", onActivity);
-      window.removeEventListener("keydown", onActivity);
-      window.removeEventListener("scroll", onActivity);
-    };
+    if (isViewChange) setIsLoadingView(true);
   }, [queryString]);
+
+  useEffect(() => {
+    if (!isLoadingView) return;
+    if (!isFetchingUrls) setIsLoadingView(false);
+  }, [isFetchingUrls, isLoadingView]);
 
   const handleCreateWithAlias = (alias: string) => {
     setPrefilledAlias(alias);
@@ -196,7 +82,7 @@ export function DashboardShell() {
   const handleCreateSuccess = () => {
     setCreateModalOpen(false);
     setPrefilledAlias("");
-    // Polling continues automatically; we can add a manual refresh later if needed.
+    void refetch();
   };
 
   const pageCount = state.pagination.totalPages || 0;
@@ -253,14 +139,6 @@ export function DashboardShell() {
   const setSearchQueryDebounced = (q: string) => {
     setSearchQuery(q);
     setCurrentPage(1);
-
-    if (searchDebounceTimerRef.current) {
-      window.clearTimeout(searchDebounceTimerRef.current);
-    }
-
-    searchDebounceTimerRef.current = window.setTimeout(() => {
-      // no-op; changing searchQuery already triggers streamUrl change
-    }, 250);
   };
 
   return (
@@ -329,12 +207,12 @@ export function DashboardShell() {
             ) : (
               <cmp.DashboardUrlList
                 urls={state.urls}
-                fetchingUrls={false}
+                fetchingUrls={isFetchingUrls && !showListSkeletons}
                 searchQuery={searchQuery}
                 onCreateWithAlias={handleCreateWithAlias}
-                  onUrlUpdated={() => {
-                    // no-op for now (polling will pick up updates)
-                  }}
+                onUrlUpdated={() => {
+                  void refetch();
+                }}
               />
             )}
           </div>

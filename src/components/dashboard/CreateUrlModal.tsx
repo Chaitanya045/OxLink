@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,8 @@ export function CreateUrlModal({
   const [expiryDate, setExpiryDate] = useState("");
   const { error, creating, createShortUrl, resetState } = useUrlShortener();
 
-  // Reset form when modal opens/closes or prefilledAlias changes
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setOriginalUrl("");
       setCustomAlias(prefilledAlias || "");
       setExpiryDate("");
@@ -46,7 +45,9 @@ export function CreateUrlModal({
       setCustomAlias("");
       setExpiryDate("");
     }
-  }, [open, prefilledAlias, resetState]);
+
+    onOpenChange(nextOpen);
+  };
 
   const handleCreate = async () => {
     if (!isValidUrl(originalUrl)) {
@@ -80,7 +81,7 @@ export function CreateUrlModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create Short URL</DialogTitle>

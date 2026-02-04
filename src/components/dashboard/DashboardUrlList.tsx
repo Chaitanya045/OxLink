@@ -34,7 +34,7 @@ export function DashboardUrlList({
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-muted-foreground mb-4">
-              No results found for "{searchQuery}".
+              No results found for &quot;{searchQuery}&quot;.
             </p>
             {onCreateWithAlias && (
               <Button onClick={() => onCreateWithAlias(searchQuery)}>
@@ -50,7 +50,7 @@ export function DashboardUrlList({
       <Card>
         <CardContent className="text-center py-12">
           <p className="text-muted-foreground mb-4">
-            You haven't created any short URLs yet.
+            You haven&apos;t created any short URLs yet.
           </p>
           <Link href="/">
             <Button>Create Your First URL</Button>

@@ -22,14 +22,11 @@ function getLastUpdatedText(lastUpdated: Date | null): string {
 }
 
 export function DashboardHeader({ lastUpdated }: DashboardHeaderProps) {
-  const [lastUpdatedText, setLastUpdatedText] = useState(
+  const [lastUpdatedText, setLastUpdatedText] = useState(() =>
     getLastUpdatedText(lastUpdated)
   );
 
   useEffect(() => {
-    // Update the text immediately
-    setLastUpdatedText(getLastUpdatedText(lastUpdated));
-
     // Update every second to keep it current
     const interval = setInterval(() => {
       setLastUpdatedText(getLastUpdatedText(lastUpdated));

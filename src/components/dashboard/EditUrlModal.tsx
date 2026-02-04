@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Url } from "@/types/dashboard";
 import { apiPath } from "@/lib/paths";
+import { apiJson } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface EditUrlModalProps {
   url: Url | null;
@@ -30,14 +33,36 @@ export function EditUrlModal({
 }: EditUrlModalProps) {
   const [originalUrl, setOriginalUrl] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Reset form when URL changes or modal opens/closes
-  useEffect(() => {
-    if (url && open) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (args: {
+      urlId: number;
+      updateData: { originalUrl?: string; expiryDate?: string | null };
+    }) => {
+      return apiJson<{ success: true; data: Url }>(
+        apiPath(`/api/urls/update/${args.urlId}`),
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: args.updateData,
+          credentials: "include",
+        }
+      );
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.urls.stats });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.urls.recent });
+      await queryClient.invalidateQueries({ queryKey: ["urls", "list"] });
+    },
+  });
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && url) {
       setOriginalUrl(url.originalUrl);
-      // Format expiry date for date input (YYYY-MM-DD)
+
       if (url.expiryDate) {
         const date = new Date(url.expiryDate);
         const year = date.getFullYear();
@@ -47,19 +72,27 @@ export function EditUrlModal({
       } else {
         setExpiryDate("");
       }
+
       setError("");
-    } else if (!open) {
+      mutation.reset();
+    }
+
+    if (!nextOpen) {
       setOriginalUrl("");
       setExpiryDate("");
       setError("");
+      mutation.reset();
     }
-  }, [url, open]);
+
+    onOpenChange(nextOpen);
+  };
 
   const handleSave = async () => {
     if (!url) return;
 
     setError("");
-    setSaving(true);
+
+    if (mutation.isPending) return;
 
     try {
       const updateData: { originalUrl?: string; expiryDate?: string | null } = {};
@@ -78,17 +111,7 @@ export function EditUrlModal({
         updateData.expiryDate = null;
       }
 
-      const response = await fetch(apiPath(`/api/urls/update/${url.id}`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update URL");
-      }
+      await mutation.mutateAsync({ urlId: url.id, updateData });
 
       onSuccess();
       onOpenChange(false);
@@ -96,15 +119,13 @@ export function EditUrlModal({
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred";
       setError(errorMessage);
-    } finally {
-      setSaving(false);
     }
   };
 
   if (!url) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit URL</DialogTitle>
@@ -128,7 +149,7 @@ export function EditUrlModal({
               value={originalUrl}
               onChange={(e) => setOriginalUrl(e.target.value)}
               placeholder="https://example.com"
-              disabled={saving}
+              disabled={mutation.isPending}
             />
           </div>
 
@@ -139,7 +160,7 @@ export function EditUrlModal({
               type="date"
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
-              disabled={saving}
+              disabled={mutation.isPending}
             />
             <p className="text-xs text-muted-foreground">
               Leave empty for no expiration
@@ -157,12 +178,12 @@ export function EditUrlModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={saving}
+            disabled={mutation.isPending}
           >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+          <Button onClick={handleSave} disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

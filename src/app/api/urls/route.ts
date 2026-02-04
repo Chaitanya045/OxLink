@@ -95,14 +95,14 @@ export async function GET(req: NextRequest) {
     const clickCountsMap = new Map<number, number>();
     
     if (allUrlIds.length > 0) {
-      const clickCounts = await db
-        .select({
-          urlId: urlClicks.urlId,
-          count: sql<number>`COUNT(*)`.as('count'),
-        })
-        .from(urlClicks)
-        .where(inArray(urlClicks.urlId, allUrlIds))
-        .groupBy(urlClicks.urlId);
+       const clickCounts = await db
+         .select({
+           urlId: urlClicks.urlId,
+           count: sql<number>`COUNT(*)`.as("count"),
+         })
+         .from(urlClicks)
+         .where(inArray(urlClicks.urlId, allUrlIds))
+         .groupBy(urlClicks.urlId);
       
       clickCounts.forEach((row) => {
         clickCountsMap.set(row.urlId, Number(row.count));
@@ -114,10 +114,10 @@ export async function GET(req: NextRequest) {
     
     if (sortByParam === "clicks") {
       // For clicks sorting, we need to sort all filtered URLs by click count, then paginate
-      const allFilteredUrls = await db
-        .select()
-        .from(urls)
-        .where(whereConditions);
+       const allFilteredUrls = await db
+         .select()
+         .from(urls)
+         .where(whereConditions);
       
       // Sort by click count
       const sortedUrls = allFilteredUrls.sort((a, b) => {
@@ -131,10 +131,10 @@ export async function GET(req: NextRequest) {
     } else {
       // For date sorting, we need to sort by updatedAt (if different from createdAt) or createdAt
       // Fetch all filtered URLs to sort by effective date (updatedAt > createdAt, else createdAt)
-      const allFilteredUrls = await db
-        .select()
-        .from(urls)
-        .where(whereConditions);
+       const allFilteredUrls = await db
+         .select()
+         .from(urls)
+         .where(whereConditions);
       
       // Sort by effective date (updatedAt if it's different from createdAt, otherwise createdAt)
       const sortedUrls = allFilteredUrls.sort((a, b) => {

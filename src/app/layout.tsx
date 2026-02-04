@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/lib/theme-provider";
 import dynamic from "next/dynamic";
 import { Toaster } from "@/components/ui/sonner";
+import { Providers } from "@/app/providers";
 
 export const metadata: Metadata = {
   title: "OxLink - URL Shortener",
@@ -24,16 +24,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <Providers>
           <NavbarWrapper />
           {children}
           <Toaster />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

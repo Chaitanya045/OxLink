@@ -13,10 +13,7 @@ import { AnalyticsLocationList } from "@/components/analytics/AnalyticsLocationL
 import { AnalyticsTrafficSources } from "@/components/analytics/AnalyticsTrafficSources";
 import type { AnalyticsData, DateRange, TimePeriod, UrlClick, UrlInfo } from "@/types/analytics";
 import { computeAnalyticsFromClicks } from "@/lib/analytics/computeAnalytics";
-import { apiPath } from "@/lib/paths";
-
-const POLL_INTERVAL_MS = 10_000;
-const IDLE_STOP_MS = 60_000;
+import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 
 interface AnalyticsShellProps {
   shortCode: string;
@@ -43,7 +40,13 @@ export default function AnalyticsShell({
     initialUrlInfo ? "ready" : "initial"
   );
   const [error, setError] = useState<string>("");
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  const analytics = useAnalyticsData({
+    shortCode,
+    timePeriod,
+    customDateRange,
+    enabled: loadState !== "initial",
+  });
 
   const analyticsData: AnalyticsData | null = useMemo(() => {
     if (!urlInfo) return null;
@@ -58,119 +61,26 @@ export default function AnalyticsShell({
       : 0;
 
   useEffect(() => {
-    let cancelled = false;
-    let intervalId: number | null = null;
-    let idleTimerId: number | null = null;
-
-    const qs = new URLSearchParams();
-    qs.set("timePeriod", timePeriod);
-    if (timePeriod === "custom" && customDateRange) {
-      qs.set("start", new Date(customDateRange.start).toISOString());
-      qs.set("end", new Date(customDateRange.end).toISOString());
+    if (loadState === "initial" && initialUrlInfo) {
+      setLoadState("ready");
     }
+  }, [initialUrlInfo, loadState]);
 
-    const fetchSnapshot = async () => {
-      try {
-        const res = await fetch(
-          apiPath(`/api/urls/${shortCode}/analytics?${qs.toString()}`),
-          {
-          credentials: "include",
-          cache: "no-store",
-        });
+  useEffect(() => {
+    if (!analytics.data) return;
+    setClicks(analytics.data.urlClicksData ?? []);
+    setUrlInfo(analytics.data.urlInfo ?? null);
+  }, [analytics.data]);
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.error ?? "Failed to fetch analytics");
-        }
-
-        const payload = (await res.json().catch(() => null)) as
-          | { urlClicksData?: UrlClick[] }
-          | null;
-
-        if (cancelled) return;
-
-        setLoadState((prev) => (prev === "initial" ? "ready" : prev));
-        setClicks(payload?.urlClicksData ?? []);
-        setLastUpdated(new Date().toISOString());
-        setError("");
-      } catch (e) {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Failed to fetch analytics");
-      }
-    };
-
-    const start = () => {
-      if (document.visibilityState !== "visible") return;
-      void fetchSnapshot();
-      if (intervalId) window.clearInterval(intervalId);
-      intervalId = window.setInterval(() => {
-        if (document.visibilityState !== "visible") return;
-        void fetchSnapshot();
-      }, POLL_INTERVAL_MS);
-    };
-
-    const stop = () => {
-      if (intervalId) window.clearInterval(intervalId);
-      intervalId = null;
-      if (idleTimerId) window.clearTimeout(idleTimerId);
-      idleTimerId = null;
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        start();
-        if (idleTimerId) window.clearTimeout(idleTimerId);
-        idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
-      } else {
-        stop();
-      }
-    };
-
-    setError("");
-    if (document.visibilityState === "visible") start();
-
-    const onActivity = () => {
-      if (document.visibilityState !== "visible") return;
-      start();
-      if (idleTimerId) window.clearTimeout(idleTimerId);
-      idleTimerId = window.setTimeout(stop, IDLE_STOP_MS);
-    };
-
-    window.addEventListener("focus", onActivity);
-    window.addEventListener("blur", stop);
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pointerdown", onActivity);
-    window.addEventListener("keydown", onActivity);
-    window.addEventListener("scroll", onActivity, { passive: true });
-
-    return () => {
-      cancelled = true;
-      stop();
-      window.removeEventListener("focus", onActivity);
-      window.removeEventListener("blur", stop);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pointerdown", onActivity);
-      window.removeEventListener("keydown", onActivity);
-      window.removeEventListener("scroll", onActivity);
-    };
-  }, [shortCode, timePeriod, customDateRange]);
+  useEffect(() => {
+    if (analytics.error) setError(analytics.error);
+    else setError("");
+  }, [analytics.error]);
 
   const refreshUrlInfo = async () => {
     try {
       setLoadState((prev) => (prev === "ready" ? "refreshing" : prev));
-      const res = await fetch(apiPath(`/api/urls/${shortCode}/analytics`), {
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Failed to refresh URL info");
-      }
-      const data = await res.json();
-      if (data?.urlInfo) {
-        setUrlInfo(data.urlInfo as UrlInfo);
-      }
-      setError("");
+      await analytics.refetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to refresh URL info");
     } finally {
@@ -253,9 +163,9 @@ export default function AnalyticsShell({
           <div className="mb-4 text-sm text-muted-foreground">{error}</div>
         ) : null}
 
-        {lastUpdated ? (
+        {analytics.lastUpdated ? (
           <div className="mb-6 text-xs text-muted-foreground">
-            Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+            Last updated: {new Date(analytics.lastUpdated).toLocaleTimeString()}
           </div>
         ) : null}
 
