@@ -11,7 +11,7 @@ import {
 import { useTheme } from "@/lib/theme-provider";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   return (
     <DropdownMenu>

@@ -56,17 +56,6 @@ export async function PATCH(
     const originalUrlChanged =
       originalUrl !== undefined && originalUrl !== currentUrl.originalUrl;
     
-    // Detect expiry date changes - handle all cases:
-    // 1. User sets a new expiry date (expiryDate is a date string)
-    // 2. User clears the expiry date (expiryDate is null)
-    // 3. User doesn't change it (expiryDate is undefined)
-    let expiryDateChanged = false;
-    if (expiryDate !== undefined) {
-      const newExpiryTime = expiryDate ? new Date(expiryDate).getTime() : null;
-      const currentExpiryTime = currentUrl.expiryDate ? new Date(currentUrl.expiryDate).getTime() : null;
-      expiryDateChanged = newExpiryTime !== currentExpiryTime;
-    }
-
     // If original URL changed, create a new version
     if (originalUrlChanged) {
       // Set current row's isLatest to false

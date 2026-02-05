@@ -6,7 +6,7 @@ import {
   generateRandomShortCode,
   isValidUrl,
 } from "@/lib/utils";
-import { eq, desc, asc, sql, inArray, and, or, ilike, isNull, gt, lte, isNotNull } from "drizzle-orm";
+import { eq, sql, inArray, and, or, ilike, isNull, gt, lte, isNotNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { consumeUserUrlCreateToken } from "@/lib/rateLimitStore";
 import { buildPublicShortUrl } from "@/lib/publicUrl";

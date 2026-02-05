@@ -75,7 +75,7 @@ export function CreateUrlModal({
 
       onSuccess();
       onOpenChange(false);
-    } catch (err) {
+    } catch {
       // Error is handled by the hook
     }
   };
