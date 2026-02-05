@@ -58,7 +58,7 @@ export function DashboardShell() {
     return params.toString();
   }, [currentPage, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
 
-  const { state, isFetchingUrls, refetch } = useDashboardData({ queryString });
+  const { state, isFetchingUrls, hasUrlsData, refetch } = useDashboardData({ queryString });
 
   useEffect(() => {
     const isInitial = prevStreamUrlRef.current === "";
@@ -207,7 +207,7 @@ export function DashboardShell() {
             ) : (
               <cmp.DashboardUrlList
                 urls={state.urls}
-                fetchingUrls={isFetchingUrls && !showListSkeletons}
+                fetchingUrls={!hasUrlsData}
                 searchQuery={searchQuery}
                 onCreateWithAlias={handleCreateWithAlias}
                 onUrlUpdated={() => {

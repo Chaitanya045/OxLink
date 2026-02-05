@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiPath } from "@/lib/paths";
 import { apiJson } from "@/lib/apiClient";
@@ -32,6 +32,12 @@ const DEFAULT_PAGINATION: PaginationData = {
 };
 
 function useSmartPolling(refetch: () => void, enabled: boolean) {
+  const refetchRef = useRef(refetch);
+
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -40,11 +46,11 @@ function useSmartPolling(refetch: () => void, enabled: boolean) {
 
     const start = () => {
       if (document.visibilityState !== "visible") return;
-      refetch();
+      refetchRef.current();
       if (intervalId) window.clearInterval(intervalId);
       intervalId = window.setInterval(() => {
         if (document.visibilityState !== "visible") return;
-        refetch();
+        refetchRef.current();
       }, POLL_INTERVAL_MS);
     };
 
@@ -90,7 +96,7 @@ function useSmartPolling(refetch: () => void, enabled: boolean) {
       window.removeEventListener("keydown", onActivity);
       window.removeEventListener("scroll", onActivity);
     };
-  }, [refetch, enabled]);
+  }, [enabled]);
 }
 
 export function useDashboardData(args: {
@@ -172,6 +178,7 @@ export function useDashboardData(args: {
   return {
     state,
     isInitialLoading,
+    hasUrlsData: Boolean(urlsQuery.data),
     isFetchingUrls: urlsQuery.isFetching,
     isFetchingStats: statsQuery.isFetching,
     refetch: async () => {

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +20,16 @@ interface NavbarProps {
 }
 
 export function Navbar({ isLoggedIn }: NavbarProps) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    // Warm the router cache for fast transitions.
+    router.prefetch("/");
+    router.prefetch("/dashboard");
+  }, [isLoggedIn, router]);
+
   const handleSignOut = async () => {
     try {
       await signOut();
