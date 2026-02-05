@@ -1,5 +1,3 @@
-import { Zap } from "lucide-react";
-
 export function HeroSection() {
   return (
     <section className="py-16 px-4">

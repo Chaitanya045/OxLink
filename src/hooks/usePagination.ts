@@ -1,9 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import type { PaginationData } from "@/types/dashboard";
-
-interface UsePaginationOptions {
-  itemsPerPage: number;
-}
 
 interface UsePaginationReturn {
   currentPage: number;
@@ -16,7 +12,7 @@ interface UsePaginationReturn {
   getPageNumbers: () => (number | string)[];
 }
 
-export function usePagination({ itemsPerPage }: UsePaginationOptions): UsePaginationReturn {
+export function usePagination(): UsePaginationReturn {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);

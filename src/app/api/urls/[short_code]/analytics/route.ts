@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { urlClicks, urls } from "@/db/schema";
 import { eq, or, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { buildPublicShortUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export async function GET(
         id: urlRecord.id,
         shortCode: urlRecord.shortCode,
         originalUrl: urlRecord.originalUrl,
-        shortUrl: `${req.headers.get("x-forwarded-proto") ?? "http"}://${req.headers.get("host") ?? "localhost:3000"}/oxlink/${urlRecord.customAlias ?? urlRecord.shortCode}`,
+        shortUrl: buildPublicShortUrl(urlRecord.customAlias ?? urlRecord.shortCode),
         customAlias: urlRecord.customAlias,
         expiryDate: urlRecord.expiryDate,
         createdAt: urlRecord.createdAt,

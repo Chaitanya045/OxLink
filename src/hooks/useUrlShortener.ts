@@ -1,6 +1,8 @@
-import { useState, useCallback } from "react";
 import type { Url } from "@/types/dashboard";
 import { apiPath } from "@/lib/paths";
+import { apiJson } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface CreateUrlData {
   originalUrl: string;
@@ -9,51 +11,34 @@ interface CreateUrlData {
 }
 
 export function useUrlShortener() {
-  const [shortUrl, setShortUrl] = useState("");
-  const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
+  const queryClient = useQueryClient();
 
-  const createShortUrl = useCallback(async (data: CreateUrlData) => {
-    setError("");
-    setShortUrl("");
-    setCreating(true);
-
-    try {
-      const response = await fetch(apiPath("/api/urls"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const resData = await response.json();
-        throw new Error(resData.error || "Failed to create short URL");
-      }
-
-      const resData = await response.json();
-      setShortUrl(resData.data.shortUrl);
+  const mutation = useMutation({
+    mutationFn: async (data: CreateUrlData) => {
+      const resData = await apiJson<{ success: true; data: Url }>(
+        apiPath("/api/urls"),
+        {
+          method: "POST",
+          body: data,
+          credentials: "include",
+        }
+      );
       return resData.data;
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred";
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setCreating(false);
-    }
-  }, []);
-
-  const resetState = useCallback(() => {
-    setShortUrl("");
-    setError("");
-  }, []);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.urls.stats });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.urls.recent });
+      await queryClient.invalidateQueries({ queryKey: ["urls", "list"] });
+    },
+  });
 
   return {
-    shortUrl,
-    error,
-    creating,
-    createShortUrl,
-    resetState,
+    shortUrl: mutation.data?.shortUrl ?? "",
+    error: mutation.error instanceof Error ? mutation.error.message : "",
+    creating: mutation.isPending,
+    createShortUrl: async (data: CreateUrlData) => mutation.mutateAsync(data),
+    resetState: () => {
+      mutation.reset();
+    },
   };
 }

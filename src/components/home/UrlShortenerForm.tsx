@@ -31,8 +31,7 @@ export function UrlShortenerForm({
   const [customAlias, setCustomAlias] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const { shortUrl, error, creating, createShortUrl, resetState } =
-    useUrlShortener();
+  const { shortUrl, error, creating, createShortUrl } = useUrlShortener();
 
   // Auto-submit pending URL data when session becomes available
   useEffect(() => {
@@ -64,7 +63,7 @@ export function UrlShortenerForm({
           onPendingDataHandled?.();
           // Notify parent of URL creation
           onUrlCreated?.();
-        } catch (err) {
+        } catch {
           // Error is handled by the hook
           // Still notify parent that we attempted to handle pending data
           onPendingDataHandled?.();
@@ -118,7 +117,7 @@ export function UrlShortenerForm({
 
       // Notify parent
       onUrlCreated?.();
-    } catch (err) {
+    } catch {
       // Error is handled by the hook
     }
   };

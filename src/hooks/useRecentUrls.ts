@@ -1,37 +1,32 @@
-import { useState, useCallback } from "react";
 import type { Url } from "@/types/dashboard";
 import { apiPath } from "@/lib/paths";
+import { apiJson } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
+import { useQuery } from "@tanstack/react-query";
 
 export function useRecentUrls() {
-  const [recentUrls, setRecentUrls] = useState<Url[]>([]);
-  const [totalUrlCount, setTotalUrlCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const fetchRecentUrls = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
+  const query = useQuery({
+    queryKey: queryKeys.urls.recent,
+    queryFn: async () => {
+      return apiJson<{ data: Url[]; pagination: { totalCount: number } }>(
         apiPath("/api/urls?page=1&limit=3&sortBy=date&sortOrder=desc"),
         {
           credentials: "include",
         }
       );
-      if (response.ok) {
-        const data = await response.json();
-        setRecentUrls(data.data);
-        setTotalUrlCount(data.pagination.totalCount);
-      }
-    } catch (error) {
-      console.error("Failed to fetch recent URLs", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    enabled: false,
+  });
+
+  const recentUrls = query.data?.data ?? [];
+  const totalUrlCount = query.data?.pagination?.totalCount ?? 0;
 
   return {
     recentUrls,
     totalUrlCount,
-    loading,
-    fetchRecentUrls,
+    loading: query.isFetching,
+    fetchRecentUrls: async () => {
+      await query.refetch();
+    },
   };
 }

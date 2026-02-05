@@ -23,16 +23,12 @@ interface UseHomeReturn {
 }
 
 export function useHome(): UseHomeReturn {
-  const { session, loading: sessionLoading, checkSession } = useSession();
+  const { session, loading: sessionLoading } = useSession();
   const { recentUrls, loading: urlsLoading, fetchRecentUrls } = useRecentUrls();
   const { pendingUrlData, clearPendingUrl } = usePendingUrl(
     session as Session | null,
     sessionLoading
   );
-
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
 
   useEffect(() => {
     if (session) {

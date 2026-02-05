@@ -1,29 +1,37 @@
-import { useState, useCallback } from "react";
 import type { Session } from "@/types/dashboard";
 import { apiPath } from "@/lib/paths";
+import { apiJson } from "@/lib/apiClient";
+import { queryKeys } from "@/lib/queryKeys";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const checkSession = useCallback(async () => {
-    try {
-      const response = await fetch(apiPath("/api/auth/session"), {
+  const query = useQuery({
+    queryKey: queryKeys.session,
+    queryFn: async () => {
+      const data = await apiJson<Session | null>(apiPath("/api/auth/session"), {
         credentials: "include",
       });
+      return data ?? null;
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+  });
 
-      if (response.ok) {
-        const data: Session = await response.json();
-        setSession(data);
-      } else {
-        setSession(null);
-      }
-    } catch {
-      setSession(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const setSession = (value: Session | null) => {
+    queryClient.setQueryData(queryKeys.session, value);
+  };
 
-  return { session, loading, checkSession, setSession };
+  const checkSession = async () => {
+    await query.refetch();
+  };
+
+  return {
+    session: query.data ?? null,
+    loading: query.isLoading,
+    checkSession,
+    setSession,
+  };
 }

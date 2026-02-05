@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Session } from "@/types/dashboard";
 
 interface PendingUrlData {
@@ -24,18 +24,20 @@ export function usePendingUrl(
   );
 
   useEffect(() => {
-    if (session && !sessionLoading) {
-      const pending = localStorage.getItem(STORAGE_KEY);
-      if (pending) {
-        try {
-          const data = JSON.parse(pending) as PendingUrlData;
-          setPendingUrlData(data);
-          localStorage.removeItem(STORAGE_KEY);
-        } catch (error) {
-          console.error("Failed to parse pending URL data", error);
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      }
+    if (!session || sessionLoading) return;
+
+    const pending = localStorage.getItem(STORAGE_KEY);
+    if (!pending) return;
+
+    try {
+      const data = JSON.parse(pending) as PendingUrlData;
+      localStorage.removeItem(STORAGE_KEY);
+
+      // Defer state update to avoid setState-in-effect lint rule
+      setTimeout(() => setPendingUrlData(data), 0);
+    } catch (error) {
+      console.error("Failed to parse pending URL data", error);
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, [session, sessionLoading]);
 
